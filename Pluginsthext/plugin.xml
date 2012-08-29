@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding='UTF-8'?>
+<plugin>
+	<nom>Thelia Extension</nom>
+ 	<version>1.0</version>
+ 	<prefixe>thext</prefixe>
+	<type>classique</type>
+ 	<auteur>Frank Ghenassia - frank@ghenassia.org</auteur>
+ 	<thelia>1.5.1</thelia>
+ 	<description>Plugin qui facilite l'écriture de plugins...</description>
+	<rubrique>Divers</rubrique>
+	<lien></lien>
+	<documentation></documentation>
+ 	<etat>test</etat>
+	<install>http://contrib.thelia.fr/IMG/zip/thext.zip</install>
+</plugin>

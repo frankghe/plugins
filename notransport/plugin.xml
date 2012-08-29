@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding='UTF-8'?>
+<plugin>
+	<nom>No transport</nom>
+ 	<version>1.0</version>
+ 	<prefix>notransport</prefix>
+	<type>transport</type>
+ 	<auteur>Frank Ghenassia - frank@ghenassia.org</auteur>
+ 	<thelia>1.5.1</thelia>
+ 	<description>Gestion des produits sans transport...</description>
+ 	<rubrique>transport</rubrique>
+	<lien>http://contrib.thelia.fr/contrib.php?prefixe=notransport</lien>
+	<documentation>Readme.txt</documentation>
+ 	<etat>production</etat>
+	<install>http://contrib.thelia.fr/client/contrib/notransport.zip</install>
+</plugin>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding='UTF-8'?>
+<plugin>
+	<nom>Noteservice</nom>
+ 	<version>1.0</version>
+ 	<prefixe>noteservice</prefixe>
+	<type>classique</type>
+ 	<auteur>Frank Ghenassia - frank@ghenassia.org</auteur>
+ 	<thelia>1.5.1</thelia>
+ 	<description>Ce plugin permet la notation de produits achetés.</description>
+	<rubrique>Divers</rubrique>
+	<lien></lien>
+	<documentation></documentation>
+ 	<etat>test</etat>
+	<install>http://contrib.thelia.fr/IMG/zip/notecommande.zip</install>
+</plugin>
