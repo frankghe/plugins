@@ -28,8 +28,8 @@ liees au support a distance et aux mecanismes associes qui permettent de monetis
 De nouveaux plugins sont aussi ajoutes pour actives des fonctionnalites typiques de gestion communautaire.
  
 L'ensemble de ces plugins snot regroupes sous le nom 'aad': Assistance A Distance.  Les plugins AAD 
-sont les suivants (attention, seuls certains plugins sont deja en ligne, les autres le seront dans un 
-avenir proche):
+sont les suivants (attention, seuls certains plugins sont utilisables en production, voire le statut
+dans le fichier xml de chaque plugin):
  
  - extclient: 
  Etend les informations disponibles pour les clients sans alterer le moteur lui-meme, 
