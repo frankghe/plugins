@@ -1,8 +1,86 @@
-Author: Frank Ghenassia
-Email: aad@ghenassia.org
-Date: August 2012
+/*-----------------------------------------------------------------------------------*/
+/*      Copyright (c) GHENASSIA Frank                                                */
+/*		email : aad@ghenassia.org                                                    */
+/*      web : http://frankghe.wordpress.com                                          */
+/*-----------------------------------------------------------------------------------*/
+/*      This program is free software; you can redistribute it and/or modify         */
+/*      it under the terms of the GNU General Public License as published by         */
+/*      the Free Software Foundation; either version 2 of the License, or            */
+/*      (at your option) any later version.                                          */
+/*                                                                                   */
+/*      This program is distributed in the hope that it will be useful,              */
+/*      but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*      GNU General Public License for more details.                                 */
+/*                                                                                   */
+/*      You should have received a copy of the GNU General Public License            */
+/*      along with this program; if not, write to the Free Software                  */
+/*      Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA    */
+/*                                                                                   */
+/*************************************************************************************/
 
-This repository contains a set of plugins for Thelia open source Web framework.
 
-These Thelia plugins intend to extend the Thelia services focused on eCommerce to add
-new features related to remote support, and associated mechanisms to monetize support. 
+Ce repertoire contient un ensemble de plugins pour le moteur eCommerce Thelia.
+
+Ces plugins servent a etendre les services de base Thelia pour ajouter des fonctionnalites
+liees au support a distance et aux mecanismes associes qui permettent de monetiser ce support.
+
+De nouveaux plugins sont aussi ajoutes pour actives des fonctionnalites typiques de gestion communautaire.
+ 
+L'ensemble de ces plugins snot regroupes sous le nom 'aad': Assistance A Distance.  Les plugins AAD 
+sont les suivants (attention, seuls certains plugins sont deja en ligne, les autres le seront dans un 
+avenir proche):
+ 
+ - extclient: 
+ Etend les informations disponibles pour les clients sans alterer le moteur lui-meme, 
+ ni la table 'client'
+ 
+ - bbb: 
+ Integre la plateforme open source  de web conferencing Big Blue Button avec Thelia
+ 
+ - bouclegen: 
+ Propose une boucle generique qui permet d'effectuer des requetes directement sur 
+ les tables depuis le code html, tout en beneficier du mecanisme de boucle natif Thelia
+ 
+ - chat:
+ Integre un mecanisme de chat a Thelia et permet aux visiteurs de discuter entre eux
+ 
+ - connexion:
+ Permet d'afficher le nombre d'utilisateurs connectes (en distinguant les visiteurs des clients)
+ 
+ - cvitae:
+ Gestion de CV lie au client
+ 
+ -  dbbrowser:
+ Backoffice parallele a celui propose par Thelia, qui permet notamment la generation automatique 
+ d'un backoffice pour les plugins
+ 
+ - fullcalendar:
+ Ajout de fonctionnalites de calendrier dans Thelia (cote client)
+ 
+ - map:
+ Gestion des codes postaux et calcul de distance entre 2 code postaux
+ 
+ - messagerie:
+ Permet la gestion de messages entre clients sur le site
+ 
+ - noteservice:
+ Permet de noter un service proposer sur le site (doit etre associe au plugin 'service')
+ 
+ - Pluginsthext:
+ Plugin de base a heriter lors de l'ecriture d'un nouveau plugin 
+ (en lieu et place de ceux proposes par Thelia) et qui simplifie l'ecriture des plugins
+ 
+ - tag:
+ Gestion de tags qui peuvent etre associes a des services ou produits
+ 
+ - texte:
+ Gestion multi-langue de champs textuels, en remplacement de l'approche standard de Thelia 
+ qui implique la creation d'une table supplementaire et limite l'approche a quelques champs seulement
+ 
+ - wallet:
+ Permet l'utilisation d'un porte-monnaie electronique entierement gere au sein du site
+ 
+ - webmtg:
+ Permet la gestion de rendez-vous entre clients (par exemple a travers un mecanisme de chat)
+  
