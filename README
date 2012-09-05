@@ -48,6 +48,9 @@ dans le fichier xml de chaque plugin):
  - messagerie:
  Permet la gestion de messages entre clients sur le site
  
+ - service:
+ Permet aux clients de proposer des services (payant) aux autres clients
+ 
  - noteservice:
  Permet de noter un service proposer sur le site (doit etre associe au plugin 'service')
  

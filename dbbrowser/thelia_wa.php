@@ -81,6 +81,8 @@ class wa_functions {
 	
 	function commande_fieldlookup($field)
 	{
+		ierror('obsolete function commande_fieldlookup');
+		die();
 		switch ($field) {
 			case 'adrlivr':
 			case 'adrfact':

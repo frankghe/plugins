@@ -4,10 +4,6 @@
 	require_once(realpath(dirname(__FILE__)) . "/../../../classes/Client.class.php");
 	loadPlugin('Extclient');
 	
-	// Classe Activite
-
-	// id --> identifiant activite
-	// desc --> nom de l'activité
 
 	class Connexion extends PluginsThext {
 
@@ -41,7 +37,7 @@
 
 		}
 
-		// Load the last connected record for $extclient 
+		// Charge le dernier enregistrement pour $extclient 
 		function charger_extclient_enligne($extclient){
 			$query = "select * from $this->table where extclient=\"$extclient\" and conn_logout=\"0000-00-00 00:00:00\" ".
 						" order by $this->table.conn_login desc limit 1";
@@ -49,7 +45,7 @@
 			return $this->getVars($query);
 		}
 
-		// Load the last connected record for $extclient
+		// Charge le dernier enregistrement pour $client 
 		function charger_client_enligne($client){
 			$c = new Client();
 			$ec = new Extclient();
@@ -109,9 +105,9 @@
 						"$t.extclient=$ec->table.id and $ec->table.issupplier=\"1\"".
 						"and conn_logout=\"0000-00-00 00:00:00\" ";
 
-			// FIXME: unused (and untested) probably can be removed
+			// FIXME: inutilise (et pas teste), peut probablement etre enleve
 			if ($service != '') {
-				// We retrieve only those suppliers who are on line *AND* offer this product
+				// On recupere seulement les fournisseurs qui sont en ligne *et* qui offrent ce produit
 				$subquery = "select extclient from connexion where conn_last>\"$conn_longest\"".
 						"and conn_logout=\"0000-00-00 00:00:00\" ";
 				$query = "select count(distinct serviceclient.id) from serviceclient where supplier in ($subquery)";

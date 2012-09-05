@@ -100,13 +100,17 @@
 			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 			";
 			
-			$res = $this->query($query);
-			
-			
-				
+			$res = $this->query($query);			
 		}
 		
-		
+		// Used by dbbrowser to edit fields of a givenrecord
+		// 'p' prefix stands for parent
+		// 'o' prefix stands for options
+		public function load_join($ptable, $pid, $otable, $oid)
+		{
+			$query = "select * from $this->table where supplier=$oid and service=$pid";
+			return $this->getVars($query);
+		}		
 	}
 	
 	

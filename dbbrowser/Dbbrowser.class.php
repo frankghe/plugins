@@ -53,13 +53,16 @@
 			//    - type=bool|int|float|char|text|datetime|date
 			//    - label=<string>
 			//    - isreference=true|false
+			//    - referenceTable=<string>
 			// list:
 			//    - access=rw|ro (rw= read/write ; ro=read-only)
 			//    - display=true|false [default=true]
 			// edit:
 			//    - access=rw|ro (rw= read/write ; ro=read-only)
 			//    - display=true|false [default=true]
-					
+			//
+			// syntax: the string must include at least one '&&' even when using only one of
+			// global, list, edit...	
 			//		
 			$p = explode("&&",$this->dbinfo['Comment']);
 
@@ -108,8 +111,9 @@
 			
 		}
 		
-		// Return html input field, ready to be integrated into  
-		public function formatEditInput($value)
+		// Return html input field, ready to be integrated into 
+		// $namesuffix is used to extend name to edit join table record 
+		public function formatEditInput($value, $namesuffix = '')
 		{
 			if ($this->fieldsInfo[$field]->global_access == 'ro')
 					$out = $value;
@@ -119,10 +123,10 @@
 					case 'char':
 					case 'float':
 					case 'datetime':						
-						$out = '<input  type="text" name="'.$this->name.'" value="'.$value.'"/>';
+						$out = '<input  type="text" name="'.$this->name.$namesuffix.'" value="'.$value.'"/>';
 						break;
 					case 'bool':
-						$out ='<select name="'.$this->name.'">';
+						$out ='<select name="'.$this->name.$namesuffix.'">';
 						if ($value == 0) $sel = 'selected';
 							else $sel = '';
 						$out.='<option value="0" '.$sel.'>false</option>';
@@ -132,7 +136,7 @@
 						$out.='</select>';
 						break;
 					case 'text':
-						$out = '<textarea  name="'.$this->name.'"/>'.$value.'</textarea>';
+						$out = '<textarea  name="'.$this->name.$namesuffix.'"/>'.$value.'</textarea>';
 						break;
 					default:
 						$out='format not supported';
@@ -172,12 +176,18 @@
 			return $this->name;
 		}
 		
+		// Returns the tablename that the field refers to IF the field is a reference
+		// Or an empty string 
 		public function isReference()
 		{
-			$ref = false;
-			if ($this->dbinfo['Type'] == 'int(11)' || $this->global_isreference == 'true') $ref = true;
+			$ref = '';
+			if ($this->dbinfo['Type'] == 'int(11)')
+				$ref = $this->name;
+			if ($this->global_isReference == 'true') 
+				// If isreference is true, then table name in Comment wins over field name
+				if ($this->global_referenceTable != '') $ref = $this->global_referenceTable;
 			// if type is int(11) but isreference is explicitely set to false, then Comment info wins
-			if ($this->global_isreference == 'false') $ref = false;
+			if ($this->global_isReference == 'false') $ref = '';
 			
 			return $ref;
 		}
@@ -229,7 +239,8 @@
 			
 			if($id > 0)
  			  $this->charger($id);
-				
+
+			$this->isJoinTable = false;
 		}
 
 		public function init(){
@@ -255,9 +266,9 @@
 		
 		function showDb()
 		{
+			$this->dbTables();
 			switch ($_REQUEST['action']) {
 				case 'dbbrowser_showtables':
-					$this->dbTables();
 					foreach ($this->tables as $t) {
 						$this->out.='<a href="'.urlfond(dbbrowser).'&action=dbbrowser_showlist&table='.$t.'">'.$t.'</a><br>';
 					}
@@ -282,7 +293,15 @@
 					$this->updateRecord($_REQUEST['id'], $_REQUEST['table']);
 					$this->out.='<button type="submit" class="button">VALIDER</button>';
 					$this->out.= '</form>';
-					default :
+					break;
+				case 'dbbrowser_editjoinrecord':
+					$this->out = '<form action="'.urlfond("test").'" method="post" name="edit" id="edit">';
+					$this->editJoinRecord($_REQUEST['id'], $_REQUEST['parenttable'], $_REQUEST['table']);
+					$this->out.='<button type="submit" class="button">VALIDER</button>';
+					$this->out.= '</form>';
+						
+					break;
+				default :
 					break;
 			}
 			return $this->out;
@@ -303,9 +322,7 @@
 			}
 				
 			$out = '<table>';
-			// Build table header
 			$out.='<thead><tr>';
-			
 			// Build 1 column for edition: edit and delete
 			$out.='<td></td>';
 			// List potential text fields in the table header
@@ -321,7 +338,7 @@
 				// Builds some kind of cache table to quickly know which fields are references to 
 				// other tables
 				// This table contains either classname string or empty if field is not a reference
-				$clname[$fitem->name] = $this->getClassname($table, $fitem->name);
+				$clname[$fitem->name] = $fitem->isReference();
 			}
 			$out.='</tr></thead>';
 			
@@ -389,9 +406,10 @@
 		// If field is a reference to another table, then return class name
 		// to use to manipulate this table
 		// otherwise empty string is returned
+		// OBSOLETE
 		function getClassname($table, $field)
 		{
-			
+			ierror('obsolete function getClassname');die();
 			if (! isset($field))
 			{
 				// Should never happen
@@ -406,7 +424,7 @@
 				exit;
 			}
 			// If field type is not int(11) then field can not be a reference to another table
-			if (! $this->fieldsInfo[$field]->isReference())
+			if ($this->fieldsInfo[$field]->isReference() == '')
 				return '';
 			
 			if ($this->isTable($field))
@@ -493,7 +511,9 @@
 			$d = $table.'desc';
 			if ($this->isTable($d))
 			{
-				// Load field info from table comment 
+				// Load field info from table comment
+				// FIXME: ce code n'est pas fonctionnel !!! 
+	   			ierror('non-functional code at '. __FILE__ . " " . __LINE__);
 				$f = $this->tableFields($d);
 			}
 				
@@ -501,12 +521,13 @@
 			if (class_exists($claz))
 			{
 				$clinst = new $claz();
-				foreach($clinst->bddvarstext as $field){
-					$fi = new fieldFormat($table);
-					$fi->loadTexte($field);
-					$f[$field] = $fi;
-					$this->totalTextFields++;
-				}
+				if (isset($clinst->bddvarstext))
+					foreach($clinst->bddvarstext as $field){
+						$fi = new fieldFormat($table);
+						$fi->loadTexte($field);
+						$f[$field] = $fi;
+						$this->totalTextFields++;
+					}
 			}
 			
 			return $f;
@@ -530,6 +551,89 @@
 			return $c;
 		}
 		
+		// Generate html to edit record fields included in $rec
+		// If $tableformat=true, html output is formatted using a table line 
+		function editRecordFields($rec, $tableformat, $ignorelist = array (''))
+		{
+			$out = '';
+			
+			// Prepare suffix if necessary
+			if ($this->isJoinTable)
+			{
+				if ($tableformat) {
+					// we assume that if tableformat is true, we are building
+					// the page to edit a join table record...
+					// suffix is _<parentable_id>_<optionstable_id>
+					$suffix='_'.$rec->$this->parenttable->id.'_'.$rec->$this->optionstable->id;
+				
+				}
+				else $suffix = '';
+				
+			}
+			
+			// for each field - except 'id'
+			// Generate html line to edit the field
+			foreach ($rec->bddvars as $field)
+			{
+				$refTable = $this->fieldsInfo[$field]->isReference();
+				
+				// FIXME: if it happens that the table contains both a field name
+				// that is a reference to a table listed but with a different name vs table name
+				// AND also another 'direct' reference to the same table
+				// Then both fields will be ignored whereas the intend is to remove only one probably
+				// AAD example: table containing both client and supplier fields 
+				if (in_array($field,$ignorelist) || in_array($refTable,$ignorelist)) continue;
+				
+				if ($field == 'id') {
+					if (! $tableformat) $out.='<input type="hidden" name="id" value="'.$rec->id.'" />';
+				}
+				else {
+					if ($tableformat) $out.='<td>';
+						else
+							$out.='<p><label for="'.$this->fieldsInfo[$field]->formatLabel().'">'.
+									$this->fieldsInfo[$field]->formatLabel().'</label>';
+					if ($refTable != '')
+					{
+						// reference to another table
+						$claz = ucfirst($refTable);
+						$cl = new $claz();
+						$cl->charger_id($rec->$field);
+						$name = $this->getName($cl);
+						// If we could not figure out the name, simply show the value
+						if (! isset($name)) $name = $rec->$field;
+						if ($this->fieldsInfo[$field]->global_access != 'ro')
+						{
+							$dl = $this->dropList($cl);
+							if ($tableformat) $link = '';
+								else 
+									$link = '<a href="'.urlfond(self::RECORDPAGE).
+											'&action=dbbrowser_editrecord&table='.$field.'&id='.
+											$rec->$field.'">'.$name.'</a>';
+							$out.=$dl.$link;
+						}
+						else
+							$out.= $name;
+					}
+					else {
+						$locf = $table.'_dbb_'.$field;
+						if (method_exists($rec,'dbb_'.$field))
+							// Specific processing exists in class for this field
+							$out.= $rec->$field('edit');
+						elseif (method_exists($this->wa,$locf))
+						// Specific processing exists in this for this field
+						$out.= $this->wa->$locf('edit');
+						else {
+							$out.=$this->fieldsInfo[$field]->formatEditInput($rec->$field, $suffix);
+						}
+					}
+					if ($tableformat) $out.='</td>';
+						else $out.='</p>';
+				}
+			}
+			return $out;
+				
+		}
+		
 		function editRecord($id, $table)
 		{
 			
@@ -540,50 +644,116 @@
 			$this->out.='<input type="hidden" name="table" value="'.$table.'" />';
 			$rec = $this->loadFields($id, $table);
 			$this->out.= $this->editTextFields($id,$table);
+			$this->out.= $this->editRecordFields($rec,false /*tableformat*/);
 			
-			// for each field - except 'id'
-			// Generate html line to edit the field
-			foreach ($rec->bddvars as $field)
-			{
-				if ($field == 'id')
-					$this->out.='<input type="hidden" name="id" value="'.$rec->id.'" />';
-				else {
-					$this->out.='<p><label for="'.$this->fieldsInfo[$field]->formatLabel().'">'.$this->fieldsInfo[$field]->formatLabel().'</label>';
-					$claz = ucfirst($field);
-					$claz = $this->getClassname($table,$field);
-					if ($claz != '')
-					{
-						// join table
-						$cl = new $claz();
-						$cl->charger_id($rec->$field);
-						$name = $this->getName($cl);
-						// If we could not figure out the name, simply show the value
-						if (! isset($name)) $name = $rec->$field;
-						if ($this->fieldsInfo[$field]->global_access != 'ro')
-						{
-							$dl = $this->dropList($cl);
-							$link = '<a href="'.urlfond(self::RECORDPAGE).'&action=dbbrowser_editrecord&table='.$field.'&id='.$rec->$field.'">'.
-									$name.'</a>';							
-							$this->out.=$dl.$link;
-						}
-						else 
-							$this->out.= $name;
-					}
-					else {
-						$locf = $table.'_dbb_'.$field;
-						if (method_exists($rec,'dbb_'.$field))
-							// Specific processing exists in class for this field
-							$this->out.= $rec->$field('edit');
-						elseif (method_exists($this->wa,$locf))
-							// Specific processing exists in this for this field
-							$this->out.= $this->wa->$locf('edit');
-						else {
-								$this->out.=$this->fieldsInfo[$field]->formatEditInput($rec->$field);
-						}
-					}
-					$this->out.='</p>';
+			// Look for join tables
+			// Try building a join table name by iterating over list of MySQL table names and check if table exists !
+			foreach ($this->tables as $tablename) {
+				$t = $table.$tablename;
+				if ($this->isTable($t)) {
+					$this->out.='<p><label">'.$t.'(nom a changer)</label>';
+					$link = '<a href="'.urlfond(self::RECORDPAGE).'&action=dbbrowser_editjoinrecord&'.
+							'parenttable='.$table.'&table='.$t.'&id='.$id.'">'.$t.'(nom a changer!)</a></p>';
+					$this->out.=$link;
 				}
 			}
+		}
+		
+		// Edit record for a table used as a join table
+		// Reminder of join table: a table that enables to connect a record from a 'parent' table
+		// to multiple records of another 'optns' table
+		function editJoinRecord($id, $parenttable, $table)
+		{
+
+			$out = '';
+				
+			// Include table names in form so that we can process submitted form properly
+			$out.='<input type="hidden" name="parenttable" value="'.$parenttable.'">';
+			$out.='<input type="hidden" name="optionstable" value="'.$optionstable.'">';
+			
+			// Load join table fields info
+			$this->fieldsInfo = $this->tableFields($table);
+			$this->textfieldsInfo = $this->textFields($table);
+							
+			$optionstable = substr($table,strlen($parenttable),strlen($table));
+
+			// Define class-wide variables so that we can reuse in other methods 
+			// without overloading method parameters
+			$this->isJoinTable = true;
+			$this->parenttable = $parenttable;
+			$this->optionstable = $optionstable;
+			
+			$query = "SELECT id FROM ".$optionstable;
+			$result = mysql_query($query);
+			if (!$result) {
+				// Should never happen
+   				ierror('internal error ('.$query.') at '. __FILE__ . " " . __LINE__);
+				exit;
+			}
+			// For each selectable 'option', display checkbox and also
+			// other fields of the join table
+			$out.='<table>';
+			$out.='<thead><tr>';
+			$out.='<th>'.$optionstable.'</th>';
+			$out.='<th>&nbsp;</th>'; // column for the checkbox
+			// Build table header
+			foreach ($this->fieldsInfo as $field) {
+				// If field is a reference to a table, lookup the tablename
+				// to compare with parent and options table names
+				$refTable = $field->isReference();
+				if ($refTable != '') $f = $refTable;
+					else $f = $field->name;
+				if ($f != 'id' &&
+					$f != $parenttable &&
+					$f != $optionstable)
+					$out.='<th>'.$field->name.'</th>';
+			}
+			foreach ($this->textfieldsInfo as $field) {
+				if ($field->nomchamp != 'id' &&
+						$field->nomchamp != $parenttable &&
+						$field->nomchamp != $optionstable)
+					$out.='<th>'.$field->name.'</th>';
+			}
+			$out.='</tr></thead>';
+				
+			while ($row =  mysql_fetch_assoc($result))
+			{
+				$out.='<tr>';
+				$optinst = new $optionstable($row['id']);
+				$out.='<td><label>'.$this->getName($optinst).'</label></td>';
+				
+				// Check if this option is already selected
+				$jt = new $table();
+				$tlj = $table.'_load_join';
+				if (! method_exists($jt,"load_join") && ! function_exists($tlj))
+				{
+					// should never happen...
+	   				ierror('internal error (load_join method does not exist for class '.$parenttable.
+	   						'| '. __FILE__ . " " . __LINE__);
+					die('');
+				}
+				if (method_exists($jt,"load_join")) {
+					if ($jt->load_join($parenttable,$id,$optionstable,$row['id']))
+						$checked = 'checked';
+					else
+						$checked = '';
+				}
+				else {
+					if ($tlj($parenttable,$id,$optionstable,$row['id']))
+							$checked = 'checked';
+					else
+							$checked = '';
+				}
+				$out.='<td><input type="checkbox" name="'.$optionstable.'_'.$optinst->id.'" '.$checked.'>';
+				$out.='</td>';
+				
+				$out.= $this->editRecordFields($jt, true /*tableformat*/, array($parenttable,$optionstable) /*ignorelist*/);
+				$out.= $this->editTextFields($id,$table, true /*tableformat*/);
+				
+				$out.='</tr>';
+			}
+			$out.='</table>';
+			$this->out.=$out;
 		}
 		
 		// Returns a list of <td>'s containing the text fields associated with $table
@@ -668,7 +838,8 @@
 		// Show text fields associated with a record
 		// Text fields are stored in <table>desc table for Thelia tables
 		// Text fields are stored in texte table for IAD
-		function editTextFields($id, $table)
+		// if tableformat, html code generated as a line of a table
+		function editTextFields($id, $table, $tableformat = false)
 		{
 			$d = $table.'desc';
 			if ($this->isTable($d))
@@ -688,8 +859,12 @@
 					foreach ($row as $field => $val)
 						// Except id, lang and reference to main table fields, print everything
 						if ($field != 'id' and $field != 'lang' and $field != $table) {
-							$out.='<p><label for="'.$this->textfieldsInfo[$field]->formatLabel().'">'.$this->textfieldsInfo[$field]->formatLabel().'</label>';
+							if ($tableformat) $out.='<td>';
+								else $out.='<p>';
+							$out.='<label for="'.$this->textfieldsInfo[$field]->formatLabel().'">'.$this->textfieldsInfo[$field]->formatLabel().'</label>';
 							$out.= $this->textfieldsInfo[$field]->formatEditInput($val);
+							if ($tableformat) $out.='</td>';
+								else $out.='</p>';
 							//$out.='<input  type="text" name="'.$field.'" value="'.$val.'"/>';
 					}
 				}
@@ -723,8 +898,12 @@
 				}
 				// We use bddvarstext to order fields in specific order
 				foreach ($clinst->bddvarstext as $field) {
-					$out.='<p><label for="'.$this->textfieldsInfo[$field]->formatLabel().'">'.$this->textfieldsInfo[$field]->formatLabel().'</label>';
+					if ($tableformat) $out.='<td>';
+						else $out.='<p><label for="'.$this->textfieldsInfo[$field]->formatLabel().
+									'">'.$this->textfieldsInfo[$field]->formatLabel().'</label>';
 					$out.=$this->textfieldsInfo[$field]->formatEditInput($row[$idx[$field]]['description']);
+					if ($tableformat) $out.='</td>';
+						else $out.='</p>';
 				}
 			}
 
@@ -857,8 +1036,8 @@
             	            	 
             }
 			else if (method_exists($claz,'dropListTable')) {
-				// Specific processing exists in class for this field
-				$out.= $claz->dropListTable($claz->id);
+				// Specific processing exists in class
+				$out.= $claz->dropListTable();
 			}
 			else if (method_exists($this->wa,$dropf)) {
 				// Specific processing exists in $this for this field

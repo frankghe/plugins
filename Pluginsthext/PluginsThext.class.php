@@ -3,18 +3,26 @@
 // Author	: Frank Ghenassia
 // Date		: May 28, 2012
 //
-// This plugin provides defaults mechanisms that can be reused by plugins deriving from it
+// Ce plugin fournit les mecanismes de base qui facilitent l'ecriture de plugins Thelia
+// Ce pluging est lui-meme est plugin Thelia standard, ce qui rend tous ceux qui utilisent 
+// PluginsThext des plugins Thelia standards !
 // 
 // Usage:
 //
-// Derive your plugin class from PluginsThext instead of PLuginsClassiques
+// Votre plugin doit simplement heriter d'une des classes suivantes (en lieu et place de la
+// classe de base Thelia du plugin correspondant), selon votre besion
+// 
+// - PluginsThext pour un plugin classique
+// - PluginsPaiementsThext pour un plugin de paiement
+// - PluginsTransportsThext pour un plugin transport
+// - BaseObjThext pour une classe interne a un plugin qui gere une table de la bdd 
 //
-//
-// Features:
-// All class variables are autmatically inferred from the MySQL database table fields
-// $bddvars and $default_bddvars are also automatically inferred from MySQL class
-// A default boucle enables to replace any field 
-// For example, if a table field is named "name", then you can replace it in boucle using #NAME
+// Fonctionnalites:
+// Toutes les variables correpondant aux champs de la tabe sont crees automatiquement
+// le tableau $bddvars est aussi automatiquement genere a partir de la tabe MySQL
+// Une boucle par defaut permet de remplacer n'improte quel champ de la table
+// Par exemple, si un champ est appele "foo", il est possible d'y acceder dans la bouce en 
+// utilisant #FOO
  
 
 include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsClassiques.class.php");
@@ -22,7 +30,7 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsPaiements.c
 include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.class.php");
 
 
-	// Helper function to load plugin while managing dependencies
+	// Gestion du chargement d'un plugin
 	function loadPlugin($plugin, $version = '') {
 		$plugin = strtolower($plugin);
 		$Plugin = ucfirst($plugin);
@@ -35,12 +43,24 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 			$parent = $temp[0];
 			die ('Plugin $parent: Vous devez installer le plugin $Plugin');
 		}
-		include_once($plugindep);
+		include_once($plugindep);	
+	}
+	
+	// Verifie sur un plugin est installe
+	function isPlugin($plugin, $version='') {
+		$isloaded = false;
+		$plugin = strtolower($plugin);
+		$Plugin = ucfirst($plugin);
 		
+		$plugindep = realpath(dirname(__FILE__)) . "/../$plugin/$Plugin.class.php";
+		if ( file_exists($plugindep)) {
+			$isloaded = true;
+		}
+		return $isloaded;		
 	}
 
 	
-	// Return an array of class $classnames loaded from database
+	// Retourne un tableau de classe $classnames charge depuis la bdd
 	function loadItems($classname, $query) {
 		
 		$list = array ();
@@ -86,21 +106,20 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 	}
 	
 	// --------------------------------------------------
-	// Plugin extension for Classiques
-	// In particular, automatically manages fields from SQL content
+	// Plugin extension pour les plugins Classiques
 	// --------------------------------------------------
 
 
 	class PluginsThext extends PluginsClassiques{
 
-		// Variable to be set from child class
+		// Variable a assignee par la classe fille
 		public $table;
 		
-		// List of fields to manage in this table
+		// Liste des champs de la table
 		public $bddvars;
 		
-		// Liste text fields to be managed in texte table
-		// Filled in by child class
+		// Liste les champs textuels a gere dans le plugin
+		// Les champs textuels sont geres par le plugin 'texte'
 		public $bddvarstext = array ();
 		
 		public function __construct( $table = '' /*table is plugin name*/){			
@@ -108,26 +127,23 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 
 			if ($table == '')
 				// Probably module initialization or pure processing plugin
+				// Probablement l'initialisation du module ou un plugin sans table MySQL
 				return ;
 				
 			$this->table = $table;
 							
-			// Create class instance variables according to MySQL table content
+			// Creation des variables selon le contenu MySQL
 			
 			$this->bddvars = array();
 			$this->bddvarstext = array();
 				
 			$result = mysql_query("SHOW COLUMNS FROM $this->table");
-			// When plugin not loaded yet, table does not exist 
-			// so i remove next check to avoid unnecessary warning
-			//if (!$result)
- 			//	ierror('internal error (db access) at '. __FILE__ . " " . __LINE__);
 			
  			if ($result && mysql_num_rows($result) > 0) {
 				while ($row = mysql_fetch_assoc($result)) {
-					// Create the variable and initialize it to...nothing !
+					// Creation de la variable et initiatlisation a... rien !
 					$this->$row['Field'] = '';
-					// Update list
+					// Mise a jour de la liste
 					array_push($this->bddvars, $row['Field']);
 				}
 			}						
@@ -137,9 +153,9 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 			return $this->getVars("select * from $this->table where id=\"$id\"");
 		}
 		
-		// This function is called from BO when "deactivating" a plugin
+		// Fonction appelee depuis le BO lors de la desactivation du plugin
 		public function destroy() {
-			// By default, remove itself from modules table
+			// Par default, no s'enleve de la table modules
 			$plugin = strtolower(get_class($this));
 			
 			$query="delete from modulesdesc where plugin='$plugin'";
@@ -202,8 +218,10 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 				
 		}
 				
-		// Look for parameters that correspond to table fields and load them as class variables
-		// Returns and search string corresponding to the list of loaded fields
+
+		// Recherche de parametres qui correspondent aux champs de la table et chargement en tant
+		// que variable de la classe
+		// Retourne une chaine a ajouter a une requete SQ pour filtrer sur les champs trouves
 		public function loadTags($args){
 			foreach ($bddvars as $key => $val) {
 				$this->$key = lireTag($args, $key);
@@ -240,8 +258,9 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 			return $this->query($query);
 		}
 		
-		// Look for parameters that correspond to table fields and load them as class variables
-		// Returns and search string corresponding to the list of loaded fields
+		// Recherche de parametres correspondant aux champs de a table et chargement en tant
+		// que variables de l'instance de classe
+		// Retourne le nombre de champs trouves
 		public function loadParams($args){
 			$i = 0;
 			foreach ($this->bddvars as $key => $val) {
@@ -258,48 +277,35 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 	
 	
 	// --------------------------------------------------
-	// Plugin extension for payments
-	// In particular, automatically manages fields from SQL content
+	// Plugin extension pour le paiement
 	// --------------------------------------------------
 
-	// php so far does NOT support multiple inheritance
-	// So instead of PluginsPaiementThext to be delared as
+	// php ne supporte pas l'heritage multiple
+	// Au lieu de declarer PluginsPaiementThext comme ca:
 	// class PluginsPaiementThext extends PluginsClassiques, PluginsPaiements
-	// We need to copy the class...
+	// On est donc oblige de copier a classe )-:
 	class PluginsPaiementsThext extends PluginsPaiements{
 	
-		// Variable to be set from child class
 		public $table;
 	
-		// Liste text fields to be managed in texte table
-		// Filled in by child class
 		public $bddvarstext = array ();
 		
 		public function __construct( $table = '' /*table is plugin name*/){
 			parent::__construct($table);
 	
 			if ($table == '')
-				// Probably module initialization
 				return ;
 	
 			$this->table = $table;
-			
-			// Create class instance variables according to MySQL table content
-				
+							
 			$this->bddvars = array();
 			$this->bddvarstext = array();
 				
 			$result = mysql_query("SHOW COLUMNS FROM $this->table");
-			// When plugin not loaded yet, table does not exist
-			// so i remove next check to avoid unnecessary warning
-			//if (!$result)
-			//	ierror('internal error (db access) at '. __FILE__ . " " . __LINE__);
 				
 			if ($result && mysql_num_rows($result) > 0) {
 				while ($row = mysql_fetch_assoc($result)) {
-					// Create the variable and initialize it to...nothing !
 					$this->$row['Field'] = '';
-					// Update list
 					array_push($this->bddvars, $row['Field']);
 					switch ($row['Type']) {
 						case 'datetime':
@@ -319,9 +325,7 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 		}
 	
 		
-		// This function is called from BO when "deactivating" a plugin
 		public function destroy() {
-			// By default, remove itself from modules table
 			$plugin = strtolower(get_class($this));
 				
 			$query="delete from modulesdesc where plugin='$plugin'";
@@ -385,10 +389,6 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 				
 		}
 				
-			
-	
-		// Look for parameters that correspond to table fields and load them as class variables
-		// Returns and search string corresponding to the list of loaded fields
 		public function loadTags($args){
 			foreach ($bddvars as $key => $val) {
 				$this->$key = lireTag($args, $key);
@@ -397,8 +397,6 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 			return $search;
 		}
 	
-		// Look for parameters that correspond to table fields and load them as class variables
-		// Returns and search string corresponding to the list of loaded fields
 		public function loadParams($args){
 			$i = 0;
 			foreach ($this->bddvars as $key => $val) {
@@ -444,14 +442,9 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 	
 
 	// --------------------------------------------------
-	// Plugin extension for transport
-	// In particular, automatically manages fields from SQL content
+	// Plugin extension pour le transport
 	// --------------------------------------------------
 	
-	// php so far does NOT support multiple inheritance
-	// So instead of PluginsPaiementThext to be delared as
-	// class PluginsPaiementThext extends PluginsClassiques, PluginsPaiements
-	// We need to copy the class...
 	class PluginsTransportsThext extends PluginsTransports{
 
 		public function __construct($nom="") {
@@ -462,11 +455,8 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 		public function charger_id($id){
 			return $this->getVars("select * from $this->table where id=\"$id\"");
 		}
-	
-	
-		// This function is called from BO when "deactivating" a plugin
+		
 		public function destroy() {
-			// By default, remove itself from modules table
 			$plugin = strtolower(get_class($this));
 	
 			$query="delete from modulesdesc where plugin='$plugin'";
@@ -481,45 +471,32 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 	
 	
 	// --------------------------------------------------
-	// Base class for non-plugin classes
+	// Class de base pour les classes internes a un plugin
+	// mais qui doivent gerees une table MySQL
 	// --------------------------------------------------
-	
-	// Class to be used when class not intended to be visible as a plugin
 	class BaseObjThext extends BaseObj {
 		
-		// Variable to be set from child class
 		public $table;
 		
 		public $bddvars = array ();
 		
-		// Liste text fields to be managed in texte table
-		// Filled in by child class
 		public $bddvarstext = array ();
 		
 		public function __construct( $table = ''){			
 			parent::__construct();
 
 			if ($table == '')
-				// Probably module initialization
 				return ;
 				
 			$this->table = $table;
 							
-			// Create class instance variables according to MySQL table content
-			
 			$this->bddvars = array();
 			
 			$result = mysql_query("SHOW COLUMNS FROM $this->table");
-			// When plugin not loaded yet, table does not exist 
-			// so i remove next check to avoid unnecessary warning
-			//if (!$result)
- 			//	ierror('internal error (db access) at '. __FILE__ . " " . __LINE__);
 			
  			if ($result && mysql_num_rows($result) > 0) {
 				while ($row = mysql_fetch_assoc($result)) {
-					// Create the variable and initialize it to...nothing !
 					$this->$row['Field'] = '';
-					// Update list
 					array_push($this->bddvars, $row['Field']);
 				}
 			}						

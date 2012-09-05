@@ -22,7 +22,7 @@
 			`isselectactive` tinyint(1) NOT NULL DEFAULT '0',
 			`adistance` tinyint(1) NOT NULL DEFAULT '0',
 			`credit` int NOT NULL DEFAULT '0',
-			`priviledge` int NOT NULL DEFAULT '0',
+			`privilege` int NOT NULL DEFAULT '0',
 			PRIMARY KEY (`id`)
 			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 			";
@@ -79,7 +79,7 @@
 							$res = str_replace($htmlTag, $t->description, $res);
 						}
 						$found = false;
-						if ($serviceclient>0){
+						if ($serviceclient>0 && isPlugin('service')) {
 							$query = "select * from serviceclientpaytype where serviceclientpaytype.paytype=$row->id
 										and serviceclientpaytype.serviceclient=$serviceclient";
 							$r = $this->query($query);
@@ -185,12 +185,12 @@
 					break ;
 				case 'extclient_config': 			
 					if (! $this->charger_client($_SESSION['navig']->client->id))
-						// should never happen
+						// ne devrait jamais arriver
 						return ;
 				
 					$this->loadParams($_REQUEST);
 				
-					// we can't activate selection if client is not a supplier
+					// on ne peut pas activer a selection sur e cleint n'est pas un fournisseur
 					if (!$this->issupplier && $this->isselectactive) $client->isselectactive = 0;
 				
 					$this->maj();

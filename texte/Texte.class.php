@@ -2,6 +2,32 @@
 
 include_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.php");
 
+
+	// Cette fonction renvoie un tableau d'instance de classes Texte
+	// qui contient la liste des champs de la table Texte filtrees avec
+	// les champs nomtable et eventuelle;ent nomchamp
+	function charger_liste_texte($table,$nomchamp='')
+	{
+		$l = array();
+		if ($nomchamp != '') $nc = " AND nomchamp='".$nomchamp."'";
+			else $nc = '';
+		$query = "SELECT * FROM texte WHERE nomtable='".$table."' AND lang='"
+					.$_SESSION['navig']->lang."'".$nc;
+		$result = mysql_query($query);
+		if (!$result) {
+			// Should never happen
+			ierror('internal error ('.$query.') at '. __FILE__ . " " . __LINE__);
+			exit;
+		}
+		while ($row =  mysql_fetch_assoc($result)) {
+			$inst = new Texte();
+			foreach ($inst->bddvars as $field)
+				$inst->$field = $row[$field];
+			array_push($l,$inst);
+		}
+		return $l;
+		
+	}
 	
 	class Texte extends PluginsThext{
 

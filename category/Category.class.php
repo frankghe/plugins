@@ -118,6 +118,22 @@
 			}				
 		}
 		
+		// Fonction utilisee par dbbrowser pour lister les valeurs disponibles
+		// dans une liste deroulante
+		// en selectionnant l'id $this->id
+		function dropListTable()
+		{
+			$out='';
+			$liste = charger_liste_texte('category','titre');
+			foreach ($liste as $inst)
+			{
+				if ($inst->parent_id == $this->id) $sel = 'selected';
+				else $sel = '';
+				$out.= '<option value="'.$inst->parent_id.'" '.$sel.'>'.$inst->description.'</option>';
+			}
+			return $out;
+		}
+		
 	}
 
 ?>
