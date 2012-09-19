@@ -30,6 +30,14 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsPaiements.c
 include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.class.php");
 
 
+	// Error display
+	function ierror($texte)
+	{
+		// should record into database when configured in production
+		echo $texte;
+		exit();
+	}
+
 	// Gestion du chargement d'un plugin
 	function loadPlugin($plugin, $version = '') {
 		$plugin = strtolower($plugin);
@@ -85,17 +93,19 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 						$i->$var = $row->$var;
 					}
 		
-					// Si certains champs doivent etre traites specifiquement
-					// (par exemple les dates)
-					// effectuer le remplacement avant la boucle par defaut
+					// If specific fields need dedicated processing
+					// (for example dates)
+					// proceed with replaceent before default loop
 		
 		
-					// Tous les champs textuels sont remplaces automatiquement
-					foreach ($i->bddvarstext as $key => $val){
-						$t = new Texte();
-						$t->charger(self::TABLE, $val, $curid, $_SESSION['navig']->lang);
-						$i->$val = $t->description;
-					}
+					// All texte fields are replaced automatically
+					if (isset($i->bddvarstext))
+						foreach ($i->bddvarstext as $key => $val){
+							$t = new Texte();
+							$t->charger(self::TABLE, $val, $curid, $_SESSION['navig']->lang);
+							$i->$val = $t->description;
+						}
+					
 					array_push($list, $i);
 				}
 			}
@@ -118,6 +128,9 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 		// Liste des champs de la table
 		public $bddvars;
 		
+		// Array containing texte strings - if any
+		public $valtext;
+		
 		// Liste les champs textuels a gere dans le plugin
 		// Les champs textuels sont geres par le plugin 'texte'
 		public $bddvarstext = array ();
@@ -136,6 +149,7 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 			
 			$this->bddvars = array();
 			$this->bddvarstext = array();
+			$this->valtext = array();
 				
 			$result = mysql_query("SHOW COLUMNS FROM $this->table");
 			
@@ -150,12 +164,27 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 		}
 
 		public function charger_id($id){
-			return $this->getVars("select * from $this->table where id=\"$id\"");
+			$loaded =  $this->getVars("select * from $this->table where id=\"$id\"");
+			
+			if ($loaded) $this->loadValtext();
+			
+			return $loaded;
 		}
 		
-		// Fonction appelee depuis le BO lors de la desactivation du plugin
+		public function loadValtext() {
+			// Load text strings associated with this field
+			if (count($this->bddvarstext)) {
+				foreach ($this->bddvarstext as $item) {
+					$t = new Texte();
+					if ( $t->charger($this->table,$item,$this->id))
+						$this->valtext[$item] = $t;
+				}
+			}
+		}
+		
+		// Called by Thelia BO when a plugin is de-activated 
 		public function destroy() {
-			// Par default, no s'enleve de la table modules
+			// BY default, we remove ourselves from moduels table
 			$plugin = strtolower(get_class($this));
 			
 			$query="delete from modulesdesc where plugin='$plugin'";
@@ -270,6 +299,43 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 				}
 			}
 			return $i;
+		}
+		
+		// Fills class variables with content stored in $a, IF defined
+		// $a is expected to be read-only...
+		public function fillFields(&$a) {
+			foreach ($this->bddvars as $var) {
+				if (array_key_exists($var, $a))
+					$this->$var = $_REQUEST[$var];
+			}
+		}
+		
+		// Update all text fields in database 
+		public function updateTextFields(&$a, $id) {
+			
+			if (count($this->bddvarstext)) {
+				if (! isPlugin('Texte'))
+					ierror('internal error (texte plugin needed) at '. __FILE__ . " " . __LINE__);
+						
+				foreach ($this->bddvarstext as $var) {
+					if (array_key_exists($var, $a)) {
+						$t = new Texte();
+						if ($t->charger($this->table, $var, $id)) {
+							$t->description = $a[$var];
+							$t->maj();
+						}
+						else {
+							$t->nomtable = $this->table;
+							$t->nomchamp = $var;
+							$t->parent_id = $id;
+							$t->description = $a[$var];
+							$t->add();
+						}
+							
+					}
+				}
+			}
+				
 		}
 		
 		

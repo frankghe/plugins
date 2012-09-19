@@ -104,15 +104,6 @@
 			$query = "select count($t.id) from $t,$ec->table where conn_last>\"$conn_longest\" and ".
 						"$t.extclient=$ec->table.id and $ec->table.issupplier=\"1\"".
 						"and conn_logout=\"0000-00-00 00:00:00\" ";
-
-			// FIXME: inutilise (et pas teste), peut probablement etre enleve
-			if ($service != '') {
-				// On recupere seulement les fournisseurs qui sont en ligne *et* qui offrent ce produit
-				$subquery = "select extclient from connexion where conn_last>\"$conn_longest\"".
-						"and conn_logout=\"0000-00-00 00:00:00\" ";
-				$query = "select count(distinct serviceclient.id) from serviceclient where supplier in ($subquery)";
-			}
-				
 				
 			$result = mysql_query($query, $this->link);
 			if ($result){

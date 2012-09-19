@@ -4,10 +4,11 @@
 	loadPlugin('Paytype');
 	loadPlugin('Texte');
 	loadPlugin('Wallet');
+	loadPlugin('Supplier');
 	
-	class Serviceclientpaytype extends BaseobjThext {
+	class Servicesupplierpaytype extends BaseobjThext {
 		
-		const TABLE="serviceclientpaytype";
+		const TABLE="servicesupplierpaytype";
 		
 		function __construct($id = 0){
 			parent::__construct(self::TABLE);
@@ -16,9 +17,9 @@
  			  $this->charger_id($id);
 		}
 
-		public function charger_serviceclient($serviceclient, $paytype)
+		public function charger_servicesupplier($servicesupplier, $paytype)
 		{
-			$query = "select * from $this->table where serviceclient=$serviceclient and paytype=$paytype";
+			$query = "select * from $this->table where servicesupplier=$servicesupplier and paytype=$paytype";
 			return $this->getVars($query);
 		}
 		
@@ -34,7 +35,7 @@
 			`price2` float NOT NULL DEFAULT '0',
 			`payperuse` boolean NOT NULL DEFAULT '0',
 			`paymentfrequency` int NOT NULL DEFAULT '0',
-			`serviceclient` int(11) NOT NULL DEFAULT '0',
+			`servicesupplier` int(11) NOT NULL DEFAULT '0',
 			PRIMARY KEY (`id`)
 			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 			";
@@ -65,9 +66,9 @@
 		
 	}
 	
-	class ServiceClient extends BaseobjThext {
+	class Servicesupplier extends BaseobjThext {
 		
-		const TABLE="serviceclient";
+		const TABLE="servicesupplier";
 				
 		function __construct($id = 0){
 			parent::__construct(self::TABLE);
@@ -79,7 +80,7 @@
 			$this->bddvarstext = array( "description");
 		}
 
-		public function charger_client($supplier, $service)
+		public function charger_supplier($supplier, $service)
 		{
 			$query = "select * from $this->table where supplier=$supplier and service=$service";
 			return $this->getVars($query);
@@ -108,7 +109,7 @@
 		// 'o' prefix stands for options
 		public function load_join($ptable, $pid, $otable, $oid)
 		{
-			$query = "select * from $this->table where supplier=$oid and service=$pid";
+			$query = "select * from $this->table where $otable=$oid and $ptable=$pid";
 			return $this->getVars($query);
 		}		
 	}
@@ -151,10 +152,10 @@
 				
 			$resul_commentaires = $this->query($query);
 			
-			$sc = new ServiceClient();
+			$sc = new Servicesupplier();
 			$sc->init();
 			
-			$scp = new ServiceClientPaytype();
+			$scp = new Servicesupplierpaytype();
 			$scp->init();
 			
 			$su = new Serviceusage();
@@ -182,28 +183,28 @@
 			$search ="";
 			$res=$out="";
 			
-			// récupération des arguments et préparation de la requète
+			// Get arguments arguments and prepare query
 			foreach ($this->bddvars as $key => $val){
 				$$val = lireTag($args, "$val");
 				if ($$val != "") $search .= " and $val=\"". $$val . "\"";
 			}
 			
 			$tablestring = self::TABLE;
-			$serviceclient = lireTag($args,'serviceclient');
-			if ($serviceclient>0) {
-				$tablestring.=','.$this->table.Client::TABLE;
-				$search.=' and '.$this->table.Client::TABLE.'.service=service.id and serviceclient.id='.$serviceclient;
+			$servicesupplier = lireTag($args,'servicesupplier');
+			if ($servicesupplier>0) {
+				$tablestring.=','.$this->table.Supplier::TABLE;
+				$search.=' and '.$this->table.Supplier::TABLE.'.service=service.id and servicesupplier.id='.$servicesupplier;
 				$extrafields = "
-						,serviceclient.supplier,
-						serviceclient.datecreation,
-						serviceclient.datemodif,
-						serviceclient.nouveaute,
-						serviceclient.online,
-						serviceclient.id sid				
+						,servicesupplier.supplier,
+						servicesupplier.datecreation,
+						servicesupplier.datemodif,
+						servicesupplier.nouveaute,
+						servicesupplier.online,
+						servicesupplier.id as sid				
 				";
 			}
 			
-			// We include serviceclient fields separately to avoid clash with id column
+			// We include servicesupplier fields separately to avoid clash with id column
 			$query = "select service.* $extrafields from ". $tablestring . " where 1 $search";
 			
 			$result = $this->query($query);
@@ -235,16 +236,16 @@
 							$res = str_replace($htmlTag, $t->description, $res);
 						}
 							
-						if ($serviceclient>0){
-							$res = str_replace("#SERVICECLIENT_SERVICE", $row->service, $res);
-							$res = str_replace("#SERVICECLIENT_SUPPLIER", $row->service, $res);
-							$res = str_replace("#SERVICECLIENT_DATECREATION", $row->datecreation, $res);
-							$res = str_replace("#SERVICECLIENT_DATEMODIF", $row->datemodif, $res);
-							$res = str_replace("#SERVICECLIENT_NOUVEAUTE", $row->nouveaute, $res);
-							$res = str_replace("#SERVICECLIENT_ONLINE", $row->online, $res);
+						if ($servicesupplier>0){
+							$res = str_replace("#SERVICESUPPLIER_SERVICE", $row->service, $res);
+							$res = str_replace("#SERVICESUPPLIER_SUPPLIER", $row->service, $res);
+							$res = str_replace("#SERVICESUPPLIER_DATECREATION", $row->datecreation, $res);
+							$res = str_replace("#SERVICESUPPLIER_DATEMODIF", $row->datemodif, $res);
+							$res = str_replace("#SERVICESUPPLIER_NOUVEAUTE", $row->nouveaute, $res);
+							$res = str_replace("#SERVICESUPPLIER_ONLINE", $row->online, $res);
 							$text = new Texte();
-							$text->charger($this->table.Client::TABLE,'description',$row->sid, $_SESSION['navig']->lang);
-							$res = str_replace("#SERVICECLIENT_DESCRIPTION", $text->description, $res);
+							$text->charger($this->table.Supplier::TABLE,'description',$row->sid, $_SESSION['navig']->lang);
+							$res = str_replace("#SERVICESUPPLIER_DESCRIPTION", $text->description, $res);
 						}
 						$out.=$res;
 					}
@@ -259,7 +260,6 @@
 				
 		}	
 				
-
 		public function create(){
 			foreach ($this->bddvars as $key => $val){
 				if (array_key_exists($val,$_REQUEST))
@@ -268,7 +268,8 @@
 			
 			if (! $this->charger_titre($this->category, $_REQUEST['titre'])) {
 				// service does not exist, we create it so that we can reference it for this supplier
-				$this->supplier = $_SESSION['navig']->client->id;
+				$s = new Supplier();
+				$this->supplier = $s->getIdFromClient($_SESSION['navig']->client->id);
 				$this->datecreation = date("Y-m-d H:i:s");
 				$this->datemodif = date("Y-m-d H:i:s");
 				$this->online = 1;
@@ -280,16 +281,17 @@
 
 			// Create supplier serivce
 			$data['service'] = $serviceid;
-			$data['supplier'] = $_SESSION['navig']->client->id;
+			$s = new Supplier();
+			$data['supplier'] = $s->getIdFromClient($_SESSION['navig']->client->id);
 			$data['datecreation'] = date("Y-m-d H:i:s");
 			$data['datemodif'] = date("Y-m-d H:i:s");
 			$data['online'] = 1;
-			$this->insertSQL(self::TABLE.Client::TABLE , $data);
+			$this->insertSQL(self::TABLE.Supplier::TABLE , $data);
 			$id = mysql_insert_id();
 				
 			// Add description text field
 			$t = new Texte();
-			$t->nomtable = self::TABLE.Client::TABLE;
+			$t->nomtable = self::TABLE.Supplier::TABLE;
 			$t->parent_id = $id;
 			$t->lang = $_SESSION['navig']->lang;
 			$a = Array("description");
@@ -317,9 +319,9 @@
 						if (is_numeric($_REQUEST[$refstring])) $lvalues.= $_REQUEST[$refstring];
 							else $lvalues.='0';
 						$data[Paytype::TABLE] = $row->id;
-						$data[$this->table.Client::TABLE] = $id;
+						$data[$this->table.Supplier::TABLE] = $id;
 						$data['price'] = $lvalues;				
-						$this->insertSQL(self::TABLE.Client::TABLE.Paytype::TABLE, $data);
+						$this->insertSQL(self::TABLE.Supplier::TABLE.Paytype::TABLE, $data);
 					}
 					else {
 						// payment type not selected
@@ -351,7 +353,8 @@
 			$t->charger($this->table,'titre',$this->id,$_SESSION['navig']->lang);
 			if ($t->description != $_REQUEST['titre']){
 				// service does not exist, we create it so that we can reference it for this supplier
-				$this->supplier = $_SESSION['navig']->client->id;
+				$s = new Supplier();
+				$this->supplier = $s->getIdFromClient($_SESSION['navig']->client->id);
 				$this->datecreation = date("Y-m-d H:i:s");
 				$this->datemodif = date("Y-m-d H:i:s");
 				$this->online = 1;
@@ -367,7 +370,7 @@
 				$t->ajout($this->bddvarstext, $_REQUEST);
 				
 				// Check if original id used. If not, delete it
-				$query = "select count(id) as res from serviceclient where serviceclient.service=$origid";
+				$query = "select count(id) as res from servicesupplier where servicesupplier.service=$origid";
 				$result = mysql_fetch_array($this->query($query),MYSQL_ASSOC);
 				if (isset($result['res']) and $result['res'] == 1){
 					// Noone using apart from this supplier, remove
@@ -387,16 +390,16 @@
 				
 			$this->maj();
 			
-			// Update serviceclient
+			// Update servicesupplier
 			// Create supplier serivce
 			$data['service'] = $serviceid;
 			$data['datemodif'] = date("Y-m-d H:i:s");
 			$data['online'] = 1;
-			$cond = "id=".$_REQUEST['serviceclient'];
-			$this->updateSQL(self::TABLE.Client::TABLE , $data, $cond);
+			$cond = "id=".$_REQUEST['servicesupplier'];
+			$this->updateSQL(self::TABLE.Supplier::TABLE , $data, $cond);
 			// Update description field
 			$t = new Texte();
-			$t->charger($this->table.Client::TABLE,'description',$_REQUEST['serviceclient'],$_SESSION['navig']->lang);
+			$t->charger($this->table.Supplier::TABLE,'description',$_REQUEST['servicesupplier'],$_SESSION['navig']->lang);
 			$t->description = $_REQUEST['description'];	
 			$t->maj();
 			
@@ -406,9 +409,9 @@
 			$result = $this->query($query);
 			if ($result) {
 				while( $row = $this->fetch_object($result)){
-					$scp = new ServiceClientPaytype();
+					$scp = new Servicesupplierpaytype();
 					$exists = false;
-					if ($scp->charger_serviceclient($_REQUEST['serviceclient'], $row->id))
+					if ($scp->charger_servicesupplier($_REQUEST['servicesupplier'], $row->id))
 							$exists = true;
 					
 					// Prepare the values
@@ -422,7 +425,7 @@
 					if (is_numeric($_REQUEST[$refstring])) $price2= $_REQUEST[$refstring];
 						else $scp->discount='0';
 						
-					$scp->serviceclient = $_REQUEST['serviceclient'];
+					$scp->servicesupplier = $_REQUEST['servicesupplier'];
 					$scp->paytype = $row->id;
 					// Update , create or delete according to request
 					if ($_REQUEST[Paytype::TABLE.'_id_'.$row->id] == 1) {
@@ -456,7 +459,7 @@
 				$this->create();
 			}
 			elseif ($_REQUEST['action'] == "service_paiement"){
-				$scp = new ServiceClientPaytype($_REQUEST['scp_id']);
+				$scp = new Servicesupplierpaytype($_REQUEST['scp_id']);
 				$scp->purchase($_SESSION['navig']->client->id);
 			}
 			else { 			

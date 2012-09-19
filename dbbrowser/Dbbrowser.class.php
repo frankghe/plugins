@@ -259,7 +259,8 @@
 					break;
 				case 'dbbrowser_update':
 					$this->updateRecord($_REQUEST['id'], $_REQUEST['table']);
-					default :
+					break;
+				default :
 					break;
 			}
 		}		
@@ -276,26 +277,29 @@
 				case 'dbbrowser_showlist':
 					if (isset($_REQUEST['start'])) $s = $_REQUEST['start'];
 						else $s = 0;
-					$this->out = $this->showList($_REQUEST['table'],$s,10);
+					// Add link for item creation
+					$this->out = '<a href="'.urlfond(dbbrowser).'&action=dbbrowser_editrecord&table='.
+									$_REQUEST['table'].'&id=0">Ajout</a><br />';
+					$this->out.= $this->showList($_REQUEST['table'],$s,10);
 					break;
 				case 'dbbrowser_showtable':
 					$fields = $this->tableFields($_REQUEST['table']);
 					print_r($fields);
 					break;
 				case 'dbbrowser_editrecord':
-					$this->out = '<form action="'.urlfond("test").'" method="post" name="edit" id="edit">';
+					$this->out = '<form action="'.urlfond("dbbrowser").'" method="post" name="edit" id="edit">';
 					$this->editRecord($_REQUEST['id'], $_REQUEST['table']);
 					$this->out.='<button type="submit" class="button">VALIDER</button>';
 					$this->out.= '</form>';
 					break;
 				case 'dbbrowser_update':
-					$this->out = '<form action="'.urlfond("test").'" method="post" name="edit" id="edit">';
+					$this->out = '<form action="'.urlfond("dbbrowser").'" method="post" name="edit" id="edit">';
 					$this->updateRecord($_REQUEST['id'], $_REQUEST['table']);
 					$this->out.='<button type="submit" class="button">VALIDER</button>';
 					$this->out.= '</form>';
 					break;
 				case 'dbbrowser_editjoinrecord':
-					$this->out = '<form action="'.urlfond("test").'" method="post" name="edit" id="edit">';
+					$this->out = '<form action="'.urlfond("dbbrowser").'" method="post" name="edit" id="edit">';
 					$this->editJoinRecord($_REQUEST['id'], $_REQUEST['parenttable'], $_REQUEST['table']);
 					$this->out.='<button type="submit" class="button">VALIDER</button>';
 					$this->out.= '</form>';
@@ -553,18 +557,21 @@
 		
 		// Generate html to edit record fields included in $rec
 		// If $tableformat=true, html output is formatted using a table line 
-		function editRecordFields($rec, $tableformat, $ignorelist = array (''))
+		// ignorelist can not be empty otherwise it matches when $refTable='' !!!
+		function editRecordFields($rec, $tableformat, $ignorelist = array ('-'))
 		{
 			$out = '';
 			
-			// Prepare suffix if necessary
+			// Prepare suffix if necessary - used for join table
 			if ($this->isJoinTable)
 			{
 				if ($tableformat) {
 					// we assume that if tableformat is true, we are building
 					// the page to edit a join table record...
 					// suffix is _<parentable_id>_<optionstable_id>
-					$suffix='_'.$rec->$this->parenttable->id.'_'.$rec->$this->optionstable->id;
+					$pt = $this->parenttable;
+					$ot = $this->optionstable;
+					$suffix='_'.$rec->$pt.'_'.$rec->$ot;
 				
 				}
 				else $suffix = '';
@@ -615,13 +622,16 @@
 							$out.= $name;
 					}
 					else {
-						$locf = $table.'_dbb_'.$field;
-						if (method_exists($rec,'dbb_'.$field))
+						if (method_exists($rec,'dbb_'.$field)) {
 							// Specific processing exists in class for this field
-							$out.= $rec->$field('edit');
-						elseif (method_exists($this->wa,$locf))
-						// Specific processing exists in this for this field
-						$out.= $this->wa->$locf('edit');
+							$locf = 'dbb_'.$field;
+							$out.= $rec->$locf('edit');
+						}
+						elseif (method_exists($this->wa,$locf)) {
+							// Specific processing exists in this for this field
+							$locf = $table.'_dbb_'.$field;
+							$out.= $this->wa->$locf('edit');
+						}
 						else {
 							$out.=$this->fieldsInfo[$field]->formatEditInput($rec->$field, $suffix);
 						}
@@ -643,7 +653,7 @@
 			$this->out.='<input type="hidden" name="action" value="dbbrowser_update" />';
 			$this->out.='<input type="hidden" name="table" value="'.$table.'" />';
 			$rec = $this->loadFields($id, $table);
-			$this->out.= $this->editTextFields($id,$table);
+			$this->out.= $this->editTextFields($rec,$id,$table);
 			$this->out.= $this->editRecordFields($rec,false /*tableformat*/);
 			
 			// Look for join tables
@@ -739,16 +749,24 @@
 						$checked = '';
 				}
 				else {
+					// FIXME: is this line correct ?
 					if ($tlj($parenttable,$id,$optionstable,$row['id']))
 							$checked = 'checked';
 					else
 							$checked = '';
 				}
+				
+				// we manually load the references to parent and options tables in class instance
+				// so that even if record does not exist
+				// this info is available to encode it in input fields of html form
+				$jt->$parenttable = $id;
+				$jt->$optionstable = $row['id'];
+				
 				$out.='<td><input type="checkbox" name="'.$optionstable.'_'.$optinst->id.'" '.$checked.'>';
 				$out.='</td>';
 				
 				$out.= $this->editRecordFields($jt, true /*tableformat*/, array($parenttable,$optionstable) /*ignorelist*/);
-				$out.= $this->editTextFields($id,$table, true /*tableformat*/);
+				$out.= $this->editTextFields($jt,$id,$table, true /*tableformat*/);
 				
 				$out.='</tr>';
 			}
@@ -816,19 +834,15 @@
 			}
 			
 			// Retrieve values from table texte
-			$query = "SELECT nomchamp,description FROM texte WHERE nomtable='".$table."' and parent_id='".$id."' and lang='".$this->lang."'";
-			$result = mysql_query($query);
-			if (!$result) {
-				// Should never happen
-	   			ierror('internal error ('.$query.') at '. __FILE__ . " " . __LINE__);
-				exit;
-			}
-			// Normally we have only 1 record but anyway...
-			while ($row =  mysql_fetch_assoc($result))
-			{
-				//$out.='<td>'.$row['description'].'</td>';
-				$out.=$this->textfieldsInfo[$row['nomchamp']]->formatListInput($row['description']);
-				
+			$tinst = new $table();
+			if (!empty($tinst->bddvarstext)) {
+				foreach ($tinst->bddvarstext as $field) {
+					$t = new Texte();
+					if ($t->charger($table,$field,$id)) {
+						$out.=$this->textfieldsInfo[$field]->formatListInput($t->description);
+					}
+					else $out.='<td>-</td>';
+				}
 			}
 				
 			
@@ -839,8 +853,22 @@
 		// Text fields are stored in <table>desc table for Thelia tables
 		// Text fields are stored in texte table for IAD
 		// if tableformat, html code generated as a line of a table
-		function editTextFields($id, $table, $tableformat = false)
+		function editTextFields($rec, $id, $table, $tableformat = false)
 		{
+			
+			// Prepare suffix if necessary
+			if ($this->isJoinTable)
+			{
+				// we assume that if tableformat is true, we are building
+				// the page to edit a join table record...
+				// suffix is _<parentable_id>_<optionstable_id>
+				$pt = $this->parenttable;
+				$ot = $this->optionstable;
+				$suffix='_'.$rec->$pt.'_'.$rec->$ot;			
+			}
+			else $suffix = '';
+				
+				
 			$d = $table.'desc';
 			if ($this->isTable($d))
 			{
@@ -862,7 +890,7 @@
 							if ($tableformat) $out.='<td>';
 								else $out.='<p>';
 							$out.='<label for="'.$this->textfieldsInfo[$field]->formatLabel().'">'.$this->textfieldsInfo[$field]->formatLabel().'</label>';
-							$out.= $this->textfieldsInfo[$field]->formatEditInput($val);
+							$out.= $this->textfieldsInfo[$field]->formatEditInput($val, $suffix);
 							if ($tableformat) $out.='</td>';
 								else $out.='</p>';
 							//$out.='<input  type="text" name="'.$field.'" value="'.$val.'"/>';
@@ -901,7 +929,7 @@
 					if ($tableformat) $out.='<td>';
 						else $out.='<p><label for="'.$this->textfieldsInfo[$field]->formatLabel().
 									'">'.$this->textfieldsInfo[$field]->formatLabel().'</label>';
-					$out.=$this->textfieldsInfo[$field]->formatEditInput($row[$idx[$field]]['description']);
+					$out.=$this->textfieldsInfo[$field]->formatEditInput($row[$idx[$field]]['description'], $suffix);
 					if ($tableformat) $out.='</td>';
 						else $out.='</p>';
 				}
@@ -917,17 +945,21 @@
 			$rec = $this->loadFields($id, $table);
 			foreach ($rec->bddvars as $field)
 			{
+				$val = isset($_REQUEST[$field]);
+				$val2 = $_REQUEST[$field];
 				if (isset($_REQUEST[$field]))
 				{
-					$locf = $table.'_'.$field;
-					if (method_exists($rec,$field))
+					$locf = 'dbb_'.$field;
+					$locf2 = $table.'_dbb_'.$field;
+					if (method_exists($rec,$locf))
 						// Specific processing exists in class for this field
-						$rec->$field = $rec->$field('update');
-					elseif (method_exists($this->wa,$locf))
+						$rec->$field = $rec->$locf('update');
+					elseif (method_exists($this->wa,$locf2))
 						// Specific processing exists in this for this field
-						$rec->$field = $this->wa->$locf('update');
-					else
+						$rec->$field = $this->wa->$locf2('update');
+					else {
 						$rec->$field = $_REQUEST[$field];
+					}
 				}
 			}
 			if ($rec->id) $rec->maj();
@@ -942,6 +974,7 @@
 		{
 			$tf = array();
 			$d = $table.'desc';
+			$tinst = new $table();
 			if ($this->isTable($d))
 			{
 				//std Thelia table
@@ -984,10 +1017,25 @@
 					$this->insertSQL($d, $data);
 			
 			}
-			else
+			else if (count($tinst->bddvarstext))
 			{
-				// fetch fields from texte
-				$out = 'not done yet';
+				foreach ($tinst->bddvarstext as $t) {
+					// Check if field already stored in db
+					// then either update or add
+					$tfield = new Texte();
+					if ($tfield->charger($table,$t,$id)) {
+						$tfield->description = $_REQUEST[$t];
+						$tfield->maj();
+					}				
+					else if (isset($_REQUEST[$t])) {
+						$tfield->description = $_REQUEST[$t];
+						$tfield->nomtable = $table;
+						$tfield->nomchamp = $t;
+						$tfield->parent_id = $id;
+						$tfield->add();
+					}
+						
+				}
 			}
 			return $out;
 				
@@ -1088,6 +1136,8 @@
 			$locf = $claz->table.'_name';
 			if (method_exists($this->wa,$locf))
 				$out = $this->wa->$locf($claz->id);
+			else if (method_exists($claz, 'getName'))
+				$out = $claz->getName();
 			else if ($this->isTable($desc))
 			{
 				// Retrieve titre

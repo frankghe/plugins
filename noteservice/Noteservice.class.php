@@ -21,13 +21,13 @@ include_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.
 		
 		public function stats($who, $id, $operation){
 			if ($who == 'supplier')
-				$query = "select $operation(note) as res from noteservice,wallet,serviceclientpaytype,serviceclient where
-							serviceclient.supplier=$id and serviceclientpaytype.serviceclient=serviceclient.id and 
-							serviceclientpaytype.id=wallet.item and wallet.itemtype='serviceclientpaytype' and  
+				$query = "select $operation(note) as res from noteservice,wallet,servicesupplierpaytype,servicesupplier where
+							servicesupplier.supplier=$id and servicesupplierpaytype.servicesupplier=servicesupplier.id and 
+							servicesupplierpaytype.id=wallet.item and wallet.itemtype='servicesupplierpaytype' and  
 							noteservice.wallet=wallet.id";
 			else
 				$query = "select $operation(note) as res from noteservice,wallet where
-						wallet.client=$id and wallet.itemtype='serviceclientpaytype' and noteservice.wallet=wallet.id";
+						wallet.client=$id and wallet.itemtype='servicesupplierpaytype' and noteservice.wallet=wallet.id";
 				
 			
 			$result = $this->query($query);

@@ -22,7 +22,7 @@
 			`isselectactive` tinyint(1) NOT NULL DEFAULT '0',
 			`adistance` tinyint(1) NOT NULL DEFAULT '0',
 			`credit` int NOT NULL DEFAULT '0',
-			`privilege` int NOT NULL DEFAULT '0',
+			`privilege` int(4) NOT NULL DEFAULT '0',
 			PRIMARY KEY (`id`)
 			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 			";
@@ -30,10 +30,21 @@
 			$resul_commentaires = $this->query($query);
 		}
 
-		function charger_client($client) {
+		public function charger_client($client) {
 			return $this->getVars("select * from $this->table where client=\"$client\"");
 		}
 		
+		// WARNING:
+		// Only access this function IF
+		// the Supplier plugin has been separately loaded  
+		public function charge_supplier($supplier) {
+			if (! isPLugingLoaded('Supplier'))
+				ierror('Supplier pluging is not loaded at '. __FILE__ . " " . __LINE__);
+			
+			$s = new Supplier($supplier);
+			$query = "select * from $this->table where client=\"".$s->getClientId()."\"";
+			return $this->getVars($query);
+		}
 		
 		public function boucle($texte, $args){
 			$search ="";
@@ -47,7 +58,7 @@
 			}
 
 			$tablestring = self::TABLE;
-			$serviceclient = lireTag($args,'serviceclient');
+			$servicesupplier = lireTag($args,'servicesupplier');
 			$query = "select * from $tablestring where 1 $search";
 				
 			$result = $this->query($query);
@@ -79,18 +90,18 @@
 							$res = str_replace($htmlTag, $t->description, $res);
 						}
 						$found = false;
-						if ($serviceclient>0 && isPlugin('service')) {
-							$query = "select * from serviceclientpaytype where serviceclientpaytype.paytype=$row->id
-										and serviceclientpaytype.serviceclient=$serviceclient";
+						if ($servicesupplier>0 && isPlugin('service')) {
+							$query = "select * from servicesupplierpaytype where servicesupplierpaytype.paytype=$row->id
+										and servicesupplierpaytype.servicesupplier=$servicesupplier";
 							$r = $this->query($query);
 							if ($r) {
 								$nbres = $this->num_rows($r);
 								if ($nbres > 0) {
 									while( $row = $this->fetch_object($r)){
 										$found = true;
-										$res = str_replace('#SERVICECLIENTPAYTYPE_PRICE', $row->price, $res);
-										$res = str_replace('#SERVICECLIENTPAYTYPE_PRICE2', $row->price2, $res);
-										$res = str_replace('#SERVICECLIENTPAYTYPE_DISCOUNT', $row->discount, $res);
+										$res = str_replace('#SERVICESUPPLIERPAYTYPE_PRICE', $row->price, $res);
+										$res = str_replace('#SERVICESUPPLIERPAYTYPE_PRICE2', $row->price2, $res);
+										$res = str_replace('#SERVICESUPPLIERPAYTYPE_DISCOUNT', $row->discount, $res);
 										$res = str_replace('#SELECTED', 'selected', $res);
 										$res = str_replace('#CHECKED', 'checked', $res);
 									}
@@ -98,9 +109,9 @@
 							}
 						}
 						if (! $found) {
-								$res = str_replace('#SERVICECLIENTPAYTYPE_PRICE', '', $res);
-								$res = str_replace('#SERVICECLIENTPAYTYPE_PRICE2', '', $res);
-								$res = str_replace('#SERVICECLIENTPAYTYPE_DISCOUNT', '', $res);
+								$res = str_replace('#SERVICESUPPLIERPAYTYPE_PRICE', '', $res);
+								$res = str_replace('#SERVICESUPPLIERPAYTYPE_PRICE2', '', $res);
+								$res = str_replace('#SERVICESUPPLIERPAYTYPE_DISCOUNT', '', $res);
 						}
 								
 						$out.=$res;
@@ -155,6 +166,10 @@
 				else $sel = '';
 			$texte = str_replace("#".$prefix."SUPPLIER_SURSITE", $sel, $texte);
 				
+			if ($c->sursite) $sel = 'checked';
+				else $sel = '';
+			$texte = str_replace("#".$prefix."SUPPLIER_SURSITE", $sel, $texte);
+			
 			return $texte;
 		}
 		
@@ -164,12 +179,12 @@
 		}
 
 		public function apresconnexion(){
-		
-			if ( ! isset($_SESSION['navig']->extclient)) {
-				$ec = new Extclient();
-				$ec = $ec->charger_client($_SESSION['navig']->client->id);
-				$_SESSION['navig']->extclient = $ec;
-			}
+			// Useful for chat plugin
+			// FIXME: move this cde t chat plugin...
+			$_SESSION['username'] = $client->prenom.$client->nom;			
+			$ec = new Extclient();
+			$ec->charger_client($_SESSION['navig']->client->id);
+			$_SESSION['navig']->extclient = $ec;
 		}
 		
 		public function apresdeconnexion($extclient){

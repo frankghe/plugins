@@ -1,73 +1,83 @@
 <?php
 	require_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.php");	
-	loadPlugin("Texte");
 	
-	class Paytype extends PluginsThext{
-		const TABLE="paytype";		
+	class Supplier extends PluginsThext{
+		const TABLE="supplier";
 
-		const FORFAIT='forfait';
-		const PERDAY='alajournee';
-		const PERHOUR='alheure';
-		const PERMIN = 'alaminute';
-		const SUBSCRIPTION = 'abonnement';
-		
-		
-		function __construct($id = 0){
+		function __construct($id = ""){
 			parent::__construct(self::TABLE);
 		
-			if($id != 0)
+			if($id != "")
 				$this->charger_id($id);
 			
-			$this->bddvarstext = array (
-					"titre" , "description"
-			);
-				
+			$this->issupplier = false;
 		}
 		
 		public function init(){
 			$query = "
 			CREATE TABLE IF NOT EXISTS `".self::TABLE."` (
 			`id` int(11) NOT NULL AUTO_INCREMENT,
-			`category` varchar(128) DEFAULT NULL,
+			`client` int(11) NOT NULL DEFAULT '0',
+			`issupplier` tinyint(1) NOT NULL DEFAULT '0',
 			PRIMARY KEY (`id`)
 			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 			";
-		
+	
 			$resul_commentaires = $this->query($query);
 			
-			$this->category = self::FORFAIT;
-			$id = $this->add();
-			$this->addTexte($id, "Paiement forfaitaire", "");
+			// Pre-load table with all existing clients
+			$query = "SELECT id FROM client";
+			$result = $this->query($query);
 				
-			$this->category = self::PERMIN;
-			$id = $this->add();
-			$this->addTexte($id, "Paiement à la minute", "");
-
-			$this->category = self::PERHOUR;
-			$id = $this->add();
-			$this->addTexte($id, "Paiement à l'heure", "");
-				
-			$this->category = self::PERDAY;
-			$id = $this->add();
-			$this->addTexte($id, "Paiement à la journée", "");
-
-			$this->category = self::SUBSCRIPTION;
-			$id = $this->add();
-			$this->addTexte($id, "Paiement mensuel", "");
-		}
-
-		public function addTexte($id, $titre, $desc){
-			// Create default payment methods
-			$t = new Texte();
-			$t->nomtable = self::TABLE;
-			$t->parent_id = $id;
-			$t->lang = $_SESSION['navig']->lang;
-			$vars['titre'] = $titre;
-			$vars['description'] = $desc;
-			$t->ajout($this->bddvarstext, $vars);
+			if ($result) {
 			
+				$nbres = $this->num_rows($result);
+			
+				if ($nbres > 0) {
+						
+					while( $row = $this->fetch_object($result)){
+			
+						$s = new Supplier();
+						$s->client = $row->id;
+						$s->issupplier = false;
+						$s->add();
+					}
+				}
+			}
 				
 		}
+
+		function charger_client($client) {
+			return $this->getVars("select * from $this->table where client=\"$client\"");
+		}
+		
+		public function getIdFromClient($clientid) {
+			if (! $this->charger_client($_SESSION['navig']->client->id)) {
+				// Should never happen
+				ierror('internal error (client is not a supplier) at '. __FILE__ . " " . __LINE__);
+			}
+			return $this->id;
+		}
+		
+		public function getClientId() {
+			if (! $this->id>0)
+				ierror('internal error (supplier not loaded) at '. __FILE__ . " " . __LINE__);
+				
+			return $this->client;
+		}
+		
+		public function isSupplier($supplier = 0) {
+			if (! $supplier) return $this->issupplier;
+			if (! $this->charger($supplier))
+				ierror('internal error (invalid supplier id) at '. __FILE__ . " " . __LINE__);
+			return $this->issupplier;
+		}
+
+		public function getName() {
+			$c = new Client($this->client);
+			return $c->prenom." ".$c->nom;
+		}
+		
 		public function boucle($texte, $args){
 			$search ="";
 				
@@ -112,7 +122,7 @@
 							$res = str_replace($htmlTag, $t->description, $res);
 						}
 						$found = false;
-						if ($servicesupplier>0){
+						if ($servicesupplier>0 && isPlugin('service')) {
 							$query = "select * from servicesupplierpaytype where servicesupplierpaytype.paytype=$row->id
 										and servicesupplierpaytype.servicesupplier=$servicesupplier";
 							$r = $this->query($query);
@@ -147,14 +157,38 @@
 				
 		
 		}
+		
+		
+		public function apresclient($client){
+			$this->client = $client->id;
+			$this->issupplier = false; // by default, new client is not a supplier
+			$this->add();
+		}
 
-		public function action() {
-			if($_REQUEST['action'] == "paytype_init"){
-				$this->init();
+		public function apresconnexion(){
+		
+			if ( ! isset($_SESSION['navig']->supplier)) {
+				$s = new Supplier();
+				$s = $s->charger_client($_SESSION['navig']->client->id);
+				$_SESSION['navig']->supplier = $s;
 			}
 		}
 		
+		public function apresdeconnexion($extclient){
+				
+			unset($_SESSION['navig']->supplier);
+		}
 		
+		
+		public function action() {
+
+			switch ($_REQUEST['action']) {
+				case 'supplier_init': $this->init();
+					break ;
+
+				default :
+			}			
+		}
 		
 	}
 

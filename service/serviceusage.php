@@ -31,7 +31,7 @@ class Serviceusage extends BaseobjThext {
 		`id` int(11) NOT NULL AUTO_INCREMENT,
 		`client` int(11) NOT NULL DEFAULT '0',
 		`wallet` int(11) NOT NULL DEFAULT '0',
-		`serviceclientpaytype` int(11) NOT NULL DEFAULT '0',
+		`servicesupplierpaytype` int(11) NOT NULL DEFAULT '0',
 		`date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 		`dateused` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 		`fullcalendar` int(11) NOT NULL DEFAULT '0',
@@ -46,7 +46,7 @@ class Serviceusage extends BaseobjThext {
 	
 	function reserve($client,$scp) {
 		$this->client = $client;
-		$this->serviceclientpaytype = $scp;
+		$this->servicesupplierpaytype = $scp;
 		$this->date = date("Y-m-d H:i:s");
 		$this->status = self::UNPLANNED;
 		
@@ -66,7 +66,7 @@ class Serviceusage extends BaseobjThext {
 		}
 			
 		$pt = new Paytype($this->paytype());
-		$scp = new Serviceclientpaytype($this->serviceclientpaytype);
+		$scp = new Servicesupplierpaytype($this->servicesupplierpaytype);
 		// Compute real price
 		switch ($pt->category) {
 			case Paytype::PERHOUR;
@@ -110,15 +110,15 @@ class Serviceusage extends BaseobjThext {
 			
 			// Update supplier credit
 			$es = new Extclient();
-			$es->charger_client($this->supplier());
+			$es->charger_supplier($this->supplier());
 			$es->creditTransaction( + $price);
 			$es->maj();
 			
 			// Send message to supplier
 			$m = new Messagerie();
 			
-			$m->client_src = $client;
-			$m->client_dst = $supplier;
+			$m->client_src = $ec->client;
+			$m->client_dst = $es->client;
 			$m->titre = 'Paiement de service '.$this->titre.'(numero '.$this->id.')';
 			$m->message = $message;
 			$m->date = date ("Y-m-d H:i:s");
@@ -135,14 +135,14 @@ class Serviceusage extends BaseobjThext {
 	}
 	
 	public function supplier() {
-		$scp = new Serviceclientpaytype($this->serviceclientpaytype);
-		$sc = new Serviceclient($scp->serviceclient);
+		$scp = new Servicesupplierpaytype($this->servicesupplierpaytype);
+		$sc = new Servicesupplier($scp->servicesupplier);
 		return $sc->supplier;
 	}
 	
 	public function issupplier() {
-		if ($this->supplier() == $_SESSION['navig']->client->id) return true;
-		else return false;
+		$s = new Supplier();
+		return $s->isSupplier();
 	}
 	
 	public function isclient() {
@@ -162,14 +162,14 @@ class Serviceusage extends BaseobjThext {
 	
 	// Get titre of corresponding service
 	public function titre() {
-		$scp = new Serviceclientpaytype($this->item);
-		$sc = new Serviceclient($scp->serviceclient);
+		$scp = new Servicesupplierpaytype($this->item);
+		$sc = new Servicesupplier($scp->servicesupplier);
 		$s = new Service($sc->service);
 		return $sc->titre;
 	}
 	
 	public function paytype() {
-		$scp = new Serviceclientpaytype($this->serviceclientpaytype);
+		$scp = new Servicesupplierpaytype($this->servicesupplierpaytype);
 		return $scp->paytype;
 	}
 	
@@ -190,6 +190,7 @@ class Serviceusage extends BaseobjThext {
 				// Besides the standard SQL fields, we have custom fields to parse
 				$fc = new Fullcalendar();
 				$fc->client = $this->client;
+				// FIXME: where is $supplier set ??? - in moteur.php ?
 				$fc->supplier = $supplier;
 				$fc->titre = $this->titre();
 				$fc->description = $_REQUEST['message'];
