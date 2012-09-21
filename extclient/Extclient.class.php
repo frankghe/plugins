@@ -170,6 +170,8 @@
 				else $sel = '';
 			$texte = str_replace("#".$prefix."SUPPLIER_SURSITE", $sel, $texte);
 			
+			$texte = str_replace("#".$prefix."PRIVILEGE", $this->privilege, $texte);
+			
 			return $texte;
 		}
 		

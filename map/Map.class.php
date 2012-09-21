@@ -96,4 +96,3 @@ require_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.
 		
 	}
 ?>
-		

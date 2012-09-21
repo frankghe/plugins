@@ -61,6 +61,8 @@
 			`refdiv` varchar(128) DEFAULT NULL,
 			`reference` varchar(128) DEFAULT NULL,
 			`reffond` varchar(128) DEFAULT NULL,
+			`privilege_view` int(4) DEFAULT 0,
+			`privilege_edit` int(4) DEFAULT 1,
 			`datecreation` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			`dateupdate` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			PRIMARY KEY (`id`)
@@ -93,7 +95,8 @@
 		public function boucle($texte, $args){
 		$search ="";
 		
-		$res=$out="";
+		$res=$out="";		
+		
 		
 		// récupération des arguments et préparation de la requète
 		foreach ($this->bddvars as $key => $val){
@@ -115,6 +118,11 @@
 		
 					$res = $texte;
 					$curid = $row->id;
+
+					// Check for privilege
+					if ($_SESSION['navig']->connecte && $_SESSION['navig']->extclient->privilege < $row->privilege_view)
+						return '';
+						
 					
 					// Si certains champs doivent etre traites specifiquement
 					// (par exemple les dates)
@@ -162,7 +170,8 @@
 			$res = $parseur->inclusion(explode("\n", $res));
 			
 			// inclusions des plugins
-			ActionsModules::instance()->appel_module("action");
+			// we remove actions otherwise for each snippet they are executed again !
+			//ActionsModules::instance()->appel_module("action");
 			
 			$res = $parseur->analyse($res);
 			
@@ -199,9 +208,9 @@
 				
 			$this->charger_snippet($_REQUEST['refdiv'], $_REQUEST['reference'], $_REQUEST['reffond']);
 			
-			// Use Thelia parseur to process description so that 
-			// html snippets can use loops etc.
-			$this->thelia_parse();
+			if ( $_SESSION['navig']->connecte && $_SESSION['navig']->extclient->privilege < $this->privilege_view)
+				// Void description so that next line returns empty string...
+				$this->valtext['description']->description = '';
 			
 			return $this->valtext['description']->description;
 		}

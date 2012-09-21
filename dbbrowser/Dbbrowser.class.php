@@ -1,6 +1,6 @@
 <?php
 	require_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.php");
-	require_once(realpath(dirname(__FILE__)) . "./thelia_wa.php");
+	require_once(realpath(dirname(__FILE__)) . "/thelia_wa.php");
 
 	//
 	// Installation:
@@ -64,6 +64,10 @@
 			// syntax: the string must include at least one '&&' even when using only one of
 			// global, list, edit...	
 			//		
+			// Note for 'id' field:
+			// id stores all table-wide information
+			// global parameter 'privilege' indicates minimum privilege level to access the table
+			//
 			$p = explode("&&",$this->dbinfo['Comment']);
 
 			$list = explode("=>",$p[0]);
@@ -105,7 +109,7 @@
 
 			if (! isset($this->list_display)) $this->list_display = true;
 			if (! isset($this->edit_display)) $this->edit_display = true;
-			
+				
 			$this->name = $this->dbinfo['Field'];	
 				
 			
@@ -271,15 +275,18 @@
 			switch ($_REQUEST['action']) {
 				case 'dbbrowser_showtables':
 					foreach ($this->tables as $t) {
-						$this->out.='<a href="'.urlfond(dbbrowser).'&action=dbbrowser_showlist&table='.$t.'">'.$t.'</a><br>';
+						$info = $this->tableFields($t);
+						if ($_SESSION['navig']->extclient->privilege >= $info['id']->globalvalues['privilege'])
+							$this->out.='<a href="'.url_page_courante().'&action=dbbrowser_showlist&table='.$t.'">'.$t.'</a><br>';
+						else {
+							ierror('internal error (permission level insufficient) at '. __FILE__ . " " . __LINE__);
+							return ;
+						}
 					}
 					break ;
 				case 'dbbrowser_showlist':
 					if (isset($_REQUEST['start'])) $s = $_REQUEST['start'];
 						else $s = 0;
-					// Add link for item creation
-					$this->out = '<a href="'.urlfond(dbbrowser).'&action=dbbrowser_editrecord&table='.
-									$_REQUEST['table'].'&id=0">Ajout</a><br />';
 					$this->out.= $this->showList($_REQUEST['table'],$s,10);
 					break;
 				case 'dbbrowser_showtable':
@@ -287,19 +294,17 @@
 					print_r($fields);
 					break;
 				case 'dbbrowser_editrecord':
-					$this->out = '<form action="'.urlfond("dbbrowser").'" method="post" name="edit" id="edit">';
-					$this->editRecord($_REQUEST['id'], $_REQUEST['table']);
-					$this->out.='<button type="submit" class="button">VALIDER</button>';
-					$this->out.= '</form>';
-					break;
+				// update is manage through action()
+				// update via showDB means that we 'return' from an update and 
+				// want to actually display same page...
 				case 'dbbrowser_update':
-					$this->out = '<form action="'.urlfond("dbbrowser").'" method="post" name="edit" id="edit">';
-					$this->updateRecord($_REQUEST['id'], $_REQUEST['table']);
+					$this->out = '<form action="'.url_page_courante().'" method="post" name="edit" id="edit">';
+					$this->out.= $this->editRecord($_REQUEST['id'], $_REQUEST['table']);
 					$this->out.='<button type="submit" class="button">VALIDER</button>';
 					$this->out.= '</form>';
 					break;
 				case 'dbbrowser_editjoinrecord':
-					$this->out = '<form action="'.urlfond("dbbrowser").'" method="post" name="edit" id="edit">';
+					$this->out = '<form action="'.url_page_courante().'" method="post" name="edit" id="edit">';
 					$this->editJoinRecord($_REQUEST['id'], $_REQUEST['parenttable'], $_REQUEST['table']);
 					$this->out.='<button type="submit" class="button">VALIDER</button>';
 					$this->out.= '</form>';
@@ -318,14 +323,23 @@
 			$this->fieldsInfo = $this->tableFields($table);
 			$this->textfieldsInfo = $this->textFields($table);
 			
+			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->globalvalues['privilege']) {
+				ierror('internal error (permission level insufficient) at '. __FILE__ . " " . __LINE__);
+				return ;
+			}
+							
 			// FIXME
 			if ($this->totalTextFields > self::DEFLISTCOLUMNS){
 					// Should never happen
 					ierror('internal error (too many text fields - unsupported) at '. __FILE__ . " " . __LINE__);
 					exit;
 			}
+			
+			// Add link for item creation
+			$out = '<a href="'.urlfond(dbbrowser).'&action=dbbrowser_editrecord&table='.
+					$_REQUEST['table'].'&id=0">Ajout</a><br />';
 				
-			$out = '<table>';
+			$out.= '<table>';
 			$out.='<thead><tr>';
 			// Build 1 column for edition: edit and delete
 			$out.='<td></td>';
@@ -503,6 +517,10 @@
 					$f[$row['Field']]= $ff;
 				}
 			}
+			
+			// By default, privilege level for editing table is 5 
+			if (! isset($f['id']->globalvalues['privilege'])) $f['id']->globalvalues['privilege'] = 5;
+				
 			return $f;
 				
 		}
@@ -627,10 +645,10 @@
 							$locf = 'dbb_'.$field;
 							$out.= $rec->$locf('edit');
 						}
-						elseif (method_exists($this->wa,$locf)) {
+						elseif (method_exists($this->wa,$rec->table.'_dbb_'.$field)) {
 							// Specific processing exists in this for this field
-							$locf = $table.'_dbb_'.$field;
-							$out.= $this->wa->$locf('edit');
+							$locf = $rec->table.'_dbb_'.$field;
+							$out.= $this->wa->$locf($rec, 'edit');
 						}
 						else {
 							$out.=$this->fieldsInfo[$field]->formatEditInput($rec->$field, $suffix);
@@ -650,6 +668,11 @@
 			$this->fieldsInfo = $this->tableFields($table);
 			$this->textfieldsInfo = $this->textFields($table);
 			
+			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->globalvalues['privilege']) {
+				ierror('internal error (permission level insufficient) at '. __FILE__ . " " . __LINE__);
+				return ;
+			}
+							
 			$this->out.='<input type="hidden" name="action" value="dbbrowser_update" />';
 			$this->out.='<input type="hidden" name="table" value="'.$table.'" />';
 			$rec = $this->loadFields($id, $table);
@@ -942,7 +965,16 @@
 		function updateRecord($id, $table)
 		{
 			
+			$this->fieldsInfo = $this->tableFields($table);				
+			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->globalvalues['privilege']) {
+				ierror('internal error (permission level insufficient) at '. __FILE__ . " " . __LINE__);
+				return ;
+			}
+								
+				
 			$rec = $this->loadFields($id, $table);
+			
+			
 			foreach ($rec->bddvars as $field)
 			{
 				$val = isset($_REQUEST[$field]);
@@ -956,7 +988,7 @@
 						$rec->$field = $rec->$locf('update');
 					elseif (method_exists($this->wa,$locf2))
 						// Specific processing exists in this for this field
-						$rec->$field = $this->wa->$locf2('update');
+						$this->wa->$locf2($rec, 'update');
 					else {
 						$rec->$field = $_REQUEST[$field];
 					}
@@ -977,7 +1009,7 @@
 			$tinst = new $table();
 			if ($this->isTable($d))
 			{
-				//std Thelia table
+				// std Thelia table
 				// Table includes a name field, use it to show records
 				
 				// Get list of fields

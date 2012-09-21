@@ -17,9 +17,11 @@ class Statut extends BaseObjThext {
 	
 }
 
-class wa_functions {
+class wa_functions extends Cnx {
 	
-	function __construct($dbbinst){	
+	function __construct($dbbinst){
+		parent::__construct();
+		
 		$this->dbbinst = $dbbinst;
 	}
 	//
@@ -56,7 +58,7 @@ class wa_functions {
 	}
 	
 	// Called by editRecord to overwrite edition of field motdepasse from class client
-	function client_dbb_motdepasse($action)
+	function client_dbb_motdepasse($rec, $action)
 	{
 		switch ($action) {
 			case 'edit':
@@ -69,9 +71,11 @@ class wa_functions {
 					$mdp = strip_tags($_REQUEST['motdepasse']);
 					$query = "select PASSWORD('$mdp') as resultat";
 					$resul = $this->query($query);
-					$out = mysql_result($resul, 0, "resultat");
+					$rec->motdepasse = mysql_result($resul, 0, "resultat");
 				}
-				else $out = '';
+				else {
+					// Do nothing so that we keep old password
+				}
 				break;
 			default:
 				break;
