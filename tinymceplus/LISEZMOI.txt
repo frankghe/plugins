@@ -1,0 +1,27 @@
+Plugin TinyMCE Plus
+-------------------
+
+Ce plugin permet d'ajouter l'éditeur visuel TinyMCE (http://www.tinymce.com/)
+au back-office de Thelia, qui facilite grandement la mise en page de vos
+descriptions de produits, rubriques, contenus et dossiers.
+
+Le gestionnaire de fichiers utilisé est KCFinder (http://kcfinder.sunhater.com)
+
+Cet editeur apparaît par défaut sur les champs de saisie "description" des pages
+de saisie de rubrique, produit, dossier et contenu. Vous pouvez indiquer d'autres
+pages du back office en modificant le tableau $tm_pages_autorisees dans le
+fichier tinymceplus_admin_title.php
+
+Configuration
+-------------
+
+Vous pouvez configurer tous les aspects de TinyMCE en intervenant dans le fichier
+tiny_mce_init.php. Vous devrez avoir quelque connaissances Javascript et PHP
+pour ce faire.
+
+
+Auteurs
+-------
+
+Yoan de Macedo - yoan@octolys.fr
+Franck Allimant, CQFDev - www.cqfdev.fr

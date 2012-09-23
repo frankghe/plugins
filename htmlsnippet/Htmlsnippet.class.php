@@ -162,37 +162,39 @@
 		function thelia_parse(&$res) {
 			
 			$parseur = new Parseur();
-			
+
 			// fonctions à éxecuter avant les inclusions
 			ActionsModules::instance()->appel_module("inclusion");
-			
+		
 			// inclusion
-			$res = $parseur->inclusion(explode("\n", $res));
-			
+			$parseur->inclusion($res);
+		
 			// inclusions des plugins
-			// we remove actions otherwise for each snippet they are executed again !
+			// FG: actions already executed in moteur.php...
 			//ActionsModules::instance()->appel_module("action");
-			
+		
 			$res = $parseur->analyse($res);
-			
+		
 			ActionsModules::instance()->appel_module("analyse");
-			
-			Filtres::exec($res);
-			
+		
+		    Filtres::exec($res);
+		
 			$res = $parseur->post($res);
-			
+		
 			// inclusions des plugins filtres
 			ActionsModules::instance()->appel_module("post");
-			
-			// FG add customization of html file with dedicated function calls embedded in
+		
+			Tlog::ecrire($res);
+		
+			// Résultat envoyé au navigateur
+			$res = preg_replace("/(^[\r\n]*|[\r\n]+)[\s\t]*[\r\n]+/", "\n", $res);
+		
+			// FG add customization of html file with dedicated function calls embedded in 
 			if (class_exists("ajoutPhp")){
 				$aPhp = new ajoutPhp();
 				$aPhp->parse($res,$fond);
 			}
-			
-			// Résultat envoyé au navigateur
-			$res = preg_replace("/(^[\r\n]*|[\r\n]+)[\s\t]*[\r\n]+/", "\n", $res);
-			
+						
 		}
 		
 		public function edit() {
