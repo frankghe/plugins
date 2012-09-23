@@ -277,11 +277,7 @@
 					foreach ($this->tables as $t) {
 						$info = $this->tableFields($t);
 						if ($_SESSION['navig']->extclient->privilege >= $info['id']->globalvalues['privilege'])
-							$this->out.='<a href="'.url_page_courante().'&action=dbbrowser_showlist&table='.$t.'">'.$t.'</a><br>';
-						else {
-							ierror('internal error (permission level insufficient) at '. __FILE__ . " " . __LINE__);
-							return ;
-						}
+							$this->out.='<a href="'.urlfond(dbbrowser).'&action=dbbrowser_showlist&table='.$t.'">'.$t.'</a><br>';
 					}
 					break ;
 				case 'dbbrowser_showlist':

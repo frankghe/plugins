@@ -215,13 +215,22 @@
 			return $this->valtext['description']->description;
 		}
 		
+		public function create() {
+			global $reptpl;
+			require_once($reptpl.'/content_2blocks.tpl.php');
+			redirige(urlfond($_REQUEST['newfond']));
+		}
+		
 		public function action() {				
 			switch ($_REQUEST['action']) {
 				case 'htmlsnippet_init': $this->init(true /*bdoor*/);
 					break ;
 				case 'htmlsnippet_update': $this->update();
 					break;
+				//Ajax calls, returned string sent to client
 				case 'htmlsnippet_edit': echo $this->edit();
+					break ;
+				case 'htmlsnippet_create': $this->create();
 					break ;
 				default :
 			}
