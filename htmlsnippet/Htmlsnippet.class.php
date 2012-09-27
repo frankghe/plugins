@@ -36,6 +36,10 @@
 			
 			// Ce tableau liste les champs a rechercher dans la table de gestions des champs "linguistiques"
 			$this->bddvarstext = array ("description");
+			
+			// Text fields configuration for Dbbrowser 
+			$this->textDbbrowserConfig['description'] = "list=>display=0";
+			
 			if ($id > 0)
 				$this->charger_id($id);
 		}
@@ -72,86 +76,94 @@
 			$result = $this->query($query);
 		}
 		
+		// Create a new htmlsnippet record (and assciated texte entry)
+		// $values is an array containing the values 
+		function add() {
+			$this->datecreation = date("Y-m-d H:i:s");
+			$this->dateupdate = $this->datecreation;
+			$this->fillTextFields($_REQUEST);
+			$this->id = parent::add();				
+		}
+		
+		// Update a record
+		function maj() {
+			$this->dateupdate = date("Y-m-d H:i:s");
+			parent::maj();
+		}
+		
 		public function update() {
 			if (! $this->charger_snippet($_REQUEST['refdiv'], $_REQUEST['reference'], 
 												$_REQUEST['reffond'])) {
-				// create new entry
-				$this->fillFields($_REQUEST);
-				$this->datecreation = date("Y-m-d H:i:s");
-				$this->dateupdate = $this->datecreation;
-				$this->id = $this->add();
-				$this->updateTextFields($_REQUEST, $this->id);
+				// Create new entry
+				$this->fillTextFields($_REQUEST);
+				$this->add();
 			}
 			else {
 				// Update snippet
-				$this->fillFields($_REQUEST);
-				$this->dateupdate = date("Y-m-d H:i:s");
+				$this->fillTextFields($_REQUEST);
 				$this->maj();
-				$this->updateTextFields($_REQUEST, $this->id);
 			}
 				
 		}
 		
 		public function boucle($texte, $args){
-		$search ="";
-		
-		$res=$out="";		
-		
-		
-		// récupération des arguments et préparation de la requète
-		foreach ($this->bddvars as $key => $val){
-			$$val = lireTag($args, "$val");
-			if ($$val != "") $search .= " and $val=\"". $$val . "\"";
-		}
-		
-		$query = "select * from ". $this->table . " where 1 $search";
-		
-		$result = $this->query($query);
-		
-		if ($result) {
-		
-			$nbres = $this->num_rows($result);
-		
-			if ($nbres > 0) {
-		
-				while( $row = $this->fetch_object($result)){
-		
-					$res = $texte;
-					$curid = $row->id;
-
-					// Check for privilege
-					if ($_SESSION['navig']->connecte && $_SESSION['navig']->extclient->privilege < $row->privilege_view)
-						return '';
-						
-					
-					// Si certains champs doivent etre traites specifiquement
-					// (par exemple les dates)
-					// effectuer le remplacement avant la boucle par defaut
-					
-					// Par defaut, tous les champs sont disponibles en tag
-					foreach ($this->bddvars as $key => $val){
-						$htmlTag = '#'.strtoupper($val);
-						$res = str_replace($htmlTag, $row->$val, $res);				
-					}							
-									
-					// Tous les champs textuels sont remplaces automatiquement
-					foreach ($this->bddvarstext as $key => $val){
-						$t = new Texte();
-						$t->charger($this->table, $val, $curid, $_SESSION['navig']->lang);
-						$htmlTag = '#'.strtoupper($val);
-						if ($t->nomchamp == 'description')
-							$this->thelia_parse($t->description);
-						$res = str_replace($htmlTag, $t->description, $res);				
-					}
-					$out.=$res;
-				}
-			}			
-		}
-		
-		return $res;
-		
+			$search ="";
 			
-	}
+			$res=$out="";		
+			
+			
+			// récupération des arguments et préparation de la requète
+			foreach ($this->bddvars as $key => $val){
+				$$val = lireTag($args, "$val");
+				if ($$val != "") $search .= " and $val=\"". $$val . "\"";
+			}
+			
+			$query = "select * from ". $this->table . " where 1 $search";
+			
+			$result = $this->query($query);
+			
+			if ($result) {
+			
+				$nbres = $this->num_rows($result);
+			
+				if ($nbres > 0) {
+			
+					while( $row = $this->fetch_object($result)){
+			
+						$res = $texte;
+						$curid = $row->id;
+	
+						// Check for privilege
+						if ($_SESSION['navig']->connecte && $_SESSION['navig']->extclient->privilege < $row->privilege_view)
+							return '';
+							
+						
+						// Si certains champs doivent etre traites specifiquement
+						// (par exemple les dates)
+						// effectuer le remplacement avant la boucle par defaut
+						
+						// Par defaut, tous les champs sont disponibles en tag
+						foreach ($this->bddvars as $key => $val){
+							$htmlTag = '#'.strtoupper($val);
+							$res = str_replace($htmlTag, $row->$val, $res);				
+						}							
+										
+						// Tous les champs textuels sont remplaces automatiquement
+						foreach ($this->bddvarstext as $key => $val){
+							$t = new Texte();
+							$t->charger($this->table, $val, $curid, $_SESSION['navig']->lang);
+							$htmlTag = '#'.strtoupper($val);
+							if ($t->nomchamp == 'description')
+								$this->thelia_parse($t->description);
+							$res = str_replace($htmlTag, $t->description, $res);				
+						}
+						$out.=$res;
+					}
+				}			
+			}
+			
+			return $res;			
+		}
 				
 				
 		// Use Thelia parser t prcess html snippet
@@ -162,39 +174,37 @@
 		function thelia_parse(&$res) {
 			
 			$parseur = new Parseur();
-
+			
 			// fonctions à éxecuter avant les inclusions
 			ActionsModules::instance()->appel_module("inclusion");
-		
+			
 			// inclusion
-			$parseur->inclusion($res);
-		
+			$res = $parseur->inclusion(explode("\n", $res));
+			
 			// inclusions des plugins
-			// FG: actions already executed in moteur.php...
+			// we remove actions otherwise for each snippet they are executed again !
 			//ActionsModules::instance()->appel_module("action");
-		
+			
 			$res = $parseur->analyse($res);
-		
+			
 			ActionsModules::instance()->appel_module("analyse");
-		
-		    Filtres::exec($res);
-		
+			
+			Filtres::exec($res);
+			
 			$res = $parseur->post($res);
-		
+			
 			// inclusions des plugins filtres
 			ActionsModules::instance()->appel_module("post");
-		
-			Tlog::ecrire($res);
-		
-			// Résultat envoyé au navigateur
-			$res = preg_replace("/(^[\r\n]*|[\r\n]+)[\s\t]*[\r\n]+/", "\n", $res);
-		
-			// FG add customization of html file with dedicated function calls embedded in 
+			
+			// FG add customization of html file with dedicated function calls embedded in
 			if (class_exists("ajoutPhp")){
 				$aPhp = new ajoutPhp();
 				$aPhp->parse($res,$fond);
 			}
-						
+			
+			// Résultat envoyé au navigateur
+			$res = preg_replace("/(^[\r\n]*|[\r\n]+)[\s\t]*[\r\n]+/", "\n", $res);
+			
 		}
 		
 		public function edit() {
@@ -219,8 +229,15 @@
 		
 		public function create() {
 			global $reptpl;
+			// FIXME  update to support multiple templates in a generic way
 			require_once($reptpl.'/content_2blocks.tpl.php');
-			redirige(urlfond($_REQUEST['newfond']));
+			redirige(urlfond('page','spt='.$_REQUEST['reffond']));
+		}
+		
+		function getid() {
+			if ($this->charger_snippet($_REQUEST['refdiv'], $_REQUEST['reference'], $_REQUEST['reffond']))
+				return $this->id;
+			else return 0;
 		}
 		
 		public function action() {				
@@ -234,6 +251,8 @@
 					break ;
 				case 'htmlsnippet_create': $this->create();
 					break ;
+				// Ajax call
+				case 'htmlsnippet_getid': echo $this->getid();
 				default :
 			}
 		}

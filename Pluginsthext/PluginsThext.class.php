@@ -103,7 +103,7 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 						foreach ($i->bddvarstext as $key => $val){
 							$t = new Texte();
 							$t->charger(self::TABLE, $val, $curid, $_SESSION['navig']->lang);
-							$i->$val = $t->description;
+							$i->valtext[$val] = $t->description;
 						}
 					
 					array_push($list, $i);
@@ -130,6 +130,13 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 		
 		// Array containing texte strings - if any
 		public $valtext;
+		
+		// Array containing instructions for text fields to format 
+		// in dbbrowser plugin - if installed and used
+		// Format is
+		// $textDbbrowserConfig[<textFieldName>] = <config> 
+		// With config as defined in Dbbrowser, e.g. global=>label=foo
+		public $textDbbrowserConfig = array ();
 		
 		// Liste les champs textuels a gere dans le plugin
 		// Les champs textuels sont geres par le plugin 'texte'
@@ -172,12 +179,12 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 		}
 		
 		public function loadValtext() {
-			// Load text strings associated with this field
+			// Load text strings associated with this record
 			if (count($this->bddvarstext)) {
 				foreach ($this->bddvarstext as $item) {
 					$t = new Texte();
 					if ( $t->charger($this->table,$item,$this->id))
-						$this->valtext[$item] = $t;
+						$this->valtext[$item] = $t->description;
 				}
 			}
 		}
@@ -301,41 +308,65 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 			return $i;
 		}
 		
+		
 		// Fills class variables with content stored in $a, IF defined
 		// $a is expected to be read-only...
 		public function fillFields(&$a) {
 			foreach ($this->bddvars as $var) {
 				if (array_key_exists($var, $a))
-					$this->$var = $_REQUEST[$var];
+					$this->$var = $a[$var];
 			}
 		}
 		
-		// Update all text fields in database 
-		public function updateTextFields(&$a, $id) {
+		// Fills class variables with content stored in $a, IF defined
+		// $a is expected to be read-only...
+		public function fillTextFields(&$a) {
+			foreach ($this->bddvarstext as $var) {
+				if (array_key_exists($var, $a))
+					$this->valtext[$var] = $a[$var];
+			}
+		}
+		
+		// Update all text fields in database
+		public function updateTextFields() {
 			
 			if (count($this->bddvarstext)) {
 				if (! isPlugin('Texte'))
 					ierror('internal error (texte plugin needed) at '. __FILE__ . " " . __LINE__);
 						
 				foreach ($this->bddvarstext as $var) {
-					if (array_key_exists($var, $a)) {
-						$t = new Texte();
-						if ($t->charger($this->table, $var, $id)) {
-							$t->description = $a[$var];
-							$t->maj();
-						}
-						else {
-							$t->nomtable = $this->table;
-							$t->nomchamp = $var;
-							$t->parent_id = $id;
-							$t->description = $a[$var];
-							$t->add();
-						}
-							
+					$t = new Texte();
+					$t->nomtable = $this->table;
+					$t->nomchamp = $var;
+					$t->parent_id = $this->id;
+					if (array_key_exists($var, $this->valtext)) 
+						$t->description = $this->valtext[$var];
+					else
+						$t->description = ''; // We create it anyway...
+					
+					if ($t->charger($this->table, $var, $this->id)) {
+						$t->description = $this->valtext[$var];
+						$t->maj();
+					}
+					else {
+						$t->description = $this->valtext[$var];
+						$t->add();						
 					}
 				}
 			}
 				
+		}
+		
+		public function add() {			
+			$this->id = parent::add();
+			$this->updateTextFields();
+			return $this->id;
+		}
+		
+		public function maj() {
+			parent::maj();
+			$this->updateTextFields();
+			return ;
 		}
 		
 		
@@ -391,6 +422,7 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 		}
 	
 		
+		// FIXME: probably should set active=1 instead of removing record
 		public function destroy() {
 			$plugin = strtolower(get_class($this));
 				
@@ -474,6 +506,42 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 			return $i;
 		}
 		
+		// Fills class variables with content stored in $a, IF defined
+		// $a is expected to be read-only...
+		public function fillFields(&$a) {
+			foreach ($this->bddvars as $var) {
+				if (array_key_exists($var, $a))
+					$this->$var = $_REQUEST[$var];
+			}
+		}
+		
+		// Update all text fields in database
+		public function updateTextFields(&$a, $id) {
+				
+			if (count($this->bddvarstext)) {
+				if (! isPlugin('Texte'))
+					ierror('internal error (texte plugin needed) at '. __FILE__ . " " . __LINE__);
+		
+				foreach ($this->bddvarstext as $var) {
+					if (array_key_exists($var, $a)) {
+						$t = new Texte();
+						if ($t->charger($this->table, $var, $id)) {
+							$t->description = $a[$var];
+							$t->maj();
+						}
+						else {
+							$t->nomtable = $this->table;
+							$t->nomchamp = $var;
+							$t->parent_id = $id;
+							$t->description = $a[$var];
+							$t->add();
+						}
+							
+					}
+				}
+			}
+		
+		}
 		
 		
 		public function insertSQL($table, $data){
@@ -571,6 +639,116 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 		public function charger_id($id){
 			return $this->getVars("select * from $this->table where id=\"$id\"");
 		}
+
+		public function boucle($texte, $args){
+			$search ="";
+				
+			$res=$out="";
+				
+			// récupération des arguments et préparation de la requète
+			foreach ($this->bddvars as $key => $val){
+				$$val = lireTag($args, "$val");
+				if ($$val != "") $search .= " and $val=\"". $$val . "\"";
+			}
+				
+			$query = "select * from ". $this->table . " where 1 $search";
+				
+			$result = $this->query($query);
+				
+			if ($result) {
+					
+				$nbres = $this->num_rows($result);
+					
+				if ($nbres > 0) {
+						
+					while( $row = $this->fetch_object($result)){
+							
+						$res = $texte;
+						$curid = $row->id;
+		
+						// Si certains champs doivent etre traites specifiquement
+						// (par exemple les dates)
+						// effectuer le remplacement avant la boucle par defaut
+		
+						// Par defaut, tous les champs sont disponibles en tag
+						foreach ($this->bddvars as $key => $val){
+							$htmlTag = '#'.strtoupper($val);
+							$res = str_replace($htmlTag, $row->$val, $res);
+						}
+		
+						// Tous les champs textuels sont remplaces automatiquement
+						foreach ($this->bddvarstext as $key => $val){
+							$t = new Texte();
+							$t->charger(self::TABLE, $val, $curid, $_SESSION['navig']->lang);
+							$htmlTag = '#'.strtoupper($val);
+							$res = str_replace($htmlTag, $t->description, $res);
+						}
+						$out.=$res;
+					}
+				}
+			}
+				
+			return $res;
+				
+		
+		}
+		
+		public function loadTags($args){
+			foreach ($bddvars as $key => $val) {
+				$this->$key = lireTag($args, $key);
+				if ($this->$key!="")  $search.=" and $key=\"$this->$key\"";
+			}
+			return $search;
+		}
+		
+		public function loadParams($args){
+			$i = 0;
+			foreach ($this->bddvars as $key => $val) {
+				if (isset($args[$val])) {
+					$this->$val = $args[$val];
+					$i++;
+				}
+			}
+			return $i;
+		}
+		
+		// Fills class variables with content stored in $a, IF defined
+		// $a is expected to be read-only...
+		public function fillFields(&$a) {
+			foreach ($this->bddvars as $var) {
+				if (array_key_exists($var, $a))
+					$this->$var = $_REQUEST[$var];
+			}
+		}
+		
+		// Update all text fields in database
+		public function updateTextFields(&$a, $id) {
+				
+			if (count($this->bddvarstext)) {
+				if (! isPlugin('Texte'))
+					ierror('internal error (texte plugin needed) at '. __FILE__ . " " . __LINE__);
+		
+				foreach ($this->bddvarstext as $var) {
+					if (array_key_exists($var, $a)) {
+						$t = new Texte();
+						if ($t->charger($this->table, $var, $id)) {
+							$t->description = $a[$var];
+							$t->maj();
+						}
+						else {
+							$t->nomtable = $this->table;
+							$t->nomchamp = $var;
+							$t->parent_id = $id;
+							$t->description = $a[$var];
+							$t->add();
+						}
+							
+					}
+				}
+			}
+		
+		}
+		
 	}
 
 ?>
