@@ -1,5 +1,6 @@
 <?php
 	require_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.php");
+	require_once(realpath(dirname(__FILE__)) . "/../../../classes/Variable.class.php");
 	loadPlugin("Connexion");	
 	loadPlugin("Texte");
 	
@@ -29,6 +30,14 @@
 			";
 		
 			$resul_commentaires = $this->query($query);
+			
+			$v = new Variable();
+			if(! $v->charger('superadminlevel')){
+				$v->nom = superadminlevel;
+				$v->valeur = 5;
+				$v->add();
+			}
+				
 		}
 
 		public function charger_client($client) {
@@ -195,7 +204,6 @@
 			unset($_SESSION['navig']->extclient);
 		}
 		
-		
 		public function action() {
 
 			switch ($_REQUEST['action']) {
@@ -213,7 +221,6 @@
 				
 					$this->maj();
 					break;
-
 				default :
 			}			
 		}

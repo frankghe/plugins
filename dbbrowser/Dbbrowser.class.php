@@ -34,11 +34,23 @@
 		{
 			if (isset($info))
 				$this->dbinfo = $info;
-			
+
 			if (! isset($this->dbinfo)) {
 				// Should never happen
 				ierror('internal error ('.$query.') at '. __FILE__ . " " . __LINE__);
 				exit;
+			}
+			
+			// If a configuration is defined in Class, it takes precedence over db info
+			if (isset($this->table)) {
+				$claz = ucfirst($this->table);
+				if (class_exists($claz)) {
+					$clinst = new $claz();
+					if (isset($clinst->textDbbrowserConfig) &&
+						isset($clinst->textDbbrowserConfig[$this->dbinfo['Field']])) {
+						$this->dbinfo['Comment'] = $clinst->textDbbrowserConfig[$this->dbinfo['Field']];
+					}
+				}
 			}
 			
 			// Retrieve formatting info stored in Comment field of database:
@@ -70,30 +82,25 @@
 			//
 			$p = explode("&&",$this->dbinfo['Comment']);
 
-			$list = explode("=>",$p[0]);
-			$listparams = explode("|",$list[1]);
-			foreach ($listparams as $litem) {
-				$e = explode("=",$litem);
-				$this->globalvalues[$e[0]] = $e[1];
-				$varname = 'global_'.$e[0];
-				$this->$varname = $e[1];
+			foreach ($p as $scopestring) {
+					
+				// For each scope (global|edit|list), 
+				// we create a variable prefixed with global|list|edit
+				$list = explode("=>",$scopestring);
+				if (count($list) <= 1) continue;
+				
+				$l = explode("|",$list[1]);
+				foreach ($l as $item) {
+					$param = explode("=",$item);
+					$scope = $list[0];
+					$val = $scope.'_values';
+					// FIXME : next line is buggy: array name only includes the first letter of $val
+					$this->$val[$param[0]] = $param[1];
+					$varname = $scope.'_'.$param[0];
+					$this->$varname = $param[1];					
+				}
 			}
-			$list = explode("=>",$p[1]);
-			$listparams = explode("|",$list[1]);
-			foreach ($listparams as $litem) {
-				$e = explode("=",$litem);
-				$this->listvalues[$e[0]] = $e[1];
-				$varname = 'global_'.$e[0];
-				$this->$varname = $e[1];
-			}
-			$list = explode("=>",$p[2]);
-			$editparams = explode("|",$list[1]);
-			foreach ($editparams as $litem) {
-				$e = explode("=",$litem);
-				$this->editvalues[$e[0]] = $e[1];
-				$varname = 'global_'.$e[0];
-				$this->$varname = $e[1];
-			}
+			
 				
 			if (isset($this->globalvalues['type'])) $this->format = $this->globalvalues['type'];
 				else if (strpos($this->dbinfo['Type'],'int(11)') !== false) $this->format = 'int';
@@ -119,6 +126,8 @@
 		// $namesuffix is used to extend name to edit join table record 
 		public function formatEditInput($value, $namesuffix = '')
 		{
+			if (! $this->edit_display) return '';
+			
 			if ($this->fieldsInfo[$field]->global_access == 'ro')
 					$out = $value;
 			else {
@@ -126,8 +135,17 @@
 					case 'int':
 					case 'char':
 					case 'float':
-					case 'datetime':						
-						$out = '<input  type="text" name="'.$this->name.$namesuffix.'" value="'.$value.'"/>';
+						$out.= '<input  type="text" name="'.$this->name.$namesuffix.'" value="'.$value.'"/>';
+						break;
+					case 'datetime':	
+						$id = $this->name.$namesuffix;
+						$formatedvalue = date('Y-m-d H:i:s', strtotime($value));
+						$out = '    <script>
+								    $(function() {
+								    	$( "#'.$id.'" ).datepicker({dateFormat: "yy-mm-dd"});
+									});
+								    </script>';
+						$out.= '<input  type="text" name="'.$id.'" id="'.$id.'" value="'.$value.'"/>';
 						break;
 					case 'bool':
 						$out ='<select name="'.$this->name.$namesuffix.'">';
@@ -140,7 +158,7 @@
 						$out.='</select>';
 						break;
 					case 'text':
-						$out = '<textarea  name="'.$this->name.$namesuffix.'"/>'.$value.'</textarea>';
+						$out = '<textarea  name="'.$this->name.$namesuffix.'" cols="120" rows="10"/>'.$value.'</textarea>';
 						break;
 					default:
 						$out='format not supported';
@@ -151,6 +169,8 @@
 		
 		public function formatListInput($value)
 		{
+			if (! $this->list_display) return '';
+			
 			switch ($this->format) {
 				case 'int':
 				case 'char':
@@ -174,16 +194,40 @@
 		}
 		
 		// Return string to display in label tag
-		public function formatLabel()
+		public function formatLabel($mode = 'edit')
 		{
-			if ($this->global_label != '') return $this->global_label;
-			return $this->name;
+			$out = '';
+			switch ($mode) {
+				case 'edit':
+					if ($this->edit_display) {
+						if ($this->global_label != '') $out = $this->global_label;
+						else $out = $this->name;
+					} 
+					break;
+				case 'list':
+					if ($this->list_display) {
+						if ($this->global_label != '') $out = $this->global_label;
+						else $out = $this->name;
+					}
+					break;
+				default:
+					break;				
+			}
+			return $out;
 		}
 		
 		// Returns the tablename that the field refers to IF the field is a reference
 		// Or an empty string 
 		public function isReference()
 		{
+			
+			// If Class to manage table includes support for this reference
+			// then return info and we'll call the function to get table info dynamically
+			// when we build the table content
+			$claz = ucfirst($this->table);
+			if (method_exists($claz,'dbbrowser_'.$this->name.'_getReference'))
+				return 'dynamicmode';
+			
 			$ref = '';
 			if ($this->dbinfo['Type'] == 'int(11)')
 				$ref = $this->name;
@@ -276,7 +320,7 @@
 				case 'dbbrowser_showtables':
 					foreach ($this->tables as $t) {
 						$info = $this->tableFields($t);
-						if ($_SESSION['navig']->extclient->privilege >= $info['id']->globalvalues['privilege'])
+						if ($_SESSION['navig']->extclient->privilege >= $info['id']->global_privilege)
 							$this->out.='<a href="'.urlfond(dbbrowser).'&action=dbbrowser_showlist&table='.$t.'">'.$t.'</a><br>';
 					}
 					break ;
@@ -295,7 +339,7 @@
 				// want to actually display same page...
 				case 'dbbrowser_update':
 					$this->out = '<form action="'.url_page_courante().'" method="post" name="edit" id="edit">';
-					$this->out.= $this->editRecord($_REQUEST['id'], $_REQUEST['table']);
+					$this->editRecord($_REQUEST['id'], $_REQUEST['table']);
 					$this->out.='<button type="submit" class="button">VALIDER</button>';
 					$this->out.= '</form>';
 					break;
@@ -319,7 +363,7 @@
 			$this->fieldsInfo = $this->tableFields($table);
 			$this->textfieldsInfo = $this->textFields($table);
 			
-			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->globalvalues['privilege']) {
+			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->global_privilege) {
 				ierror('internal error (permission level insufficient) at '. __FILE__ . " " . __LINE__);
 				return ;
 			}
@@ -348,7 +392,8 @@
 				if ($i++ >= (self::DEFLISTCOLUMNS - $this->totalTextFields))
 					break;
 				if ($fitem->name == 'id') continue;
-				$out.='<td>'.$fitem->formatLabel().'</td>';
+				if (! $fitem->list_display) continue;
+				$out.='<td>'.$fitem->formatLabel('list').'</td>';
 				// Builds some kind of cache table to quickly know which fields are references to 
 				// other tables
 				// This table contains either classname string or empty if field is not a reference
@@ -374,7 +419,7 @@
 			while ($row = mysql_fetch_assoc($result)) {
 				$out.='<tr>';
 				// Add edition links (edit, delete)
-				$dellink = '<a href="'.urlfond(self::RECORDPAGE).'&action=dbbrowser_editrecord&table='.
+				$dellink = '<a href="'.urlfond(self::RECORDPAGE).'&action=dbbrowser_deleterecord&table='.
 								$table.'&id='.$row['id'].'"><img src="template/_gfx/db_recordremove.png"></a>';
 				$edilink = '<a href="'.urlfond(self::RECORDPAGE).'&action=dbbrowser_editrecord&table='.
 								$table.'&id='.$row['id'].'"><img src="template/_gfx/db_recordedit.png"></a>';
@@ -387,14 +432,25 @@
 						break;
 						
 					if ($fitem->name == 'id') continue;
-					
+					if (! $fitem->list_display) continue;
+						
 					if ($clname[$fitem->name] != '')
 					{
-						$claz = $clname[$fitem->name];
+						// If table being referenced is dynamically computed
+						// then we call the function from the class that
+						// will return the table name
+						if ($clname[$fitem->name] == 'dynamicmode') {
+							$cl = ucfirst($table);
+							$clinst = new $cl($row['id']);
+							$getref_function = 'dbbrowser_'.$fitem->name.'_getReference';
+							$claz = $clinst->$getref_function();
+						}
+						else
+							$claz = $clname[$fitem->name];
 						// create link to referenced table record
 						$cl = new $claz();
 						$cl->charger_id($row[$fitem->name]);
-						$name = $this->getName($cl);
+						$name = $this->dbbrowser_getName($cl);
 						// If we could not figure out the name, simply show the value
 						if (! isset($name) || $name == '') $name = $row[$fitem->name];
 						
@@ -446,11 +502,11 @@
 			else
 			{
 				$locf = $table.'_fieldlookup';
-				if (method_exists(ucfirst($table),'fieldlookup')) {
+				if (method_exists(ucfirst($table),'dbbrowser_fieldlookup')) {
 					// Specific processing exists in class for this field
 					$clname = ucfirst($table);
 					$c = new $clname();
-					$out = ucfirst($c->fieldlookup($field)); 
+					$out = ucfirst($c->dbbrowser_fieldlookup($field)); 
 				}
 				else if (method_exists($this->wa,$locf))
 				// Specific processing exists in this for this field
@@ -515,7 +571,7 @@
 			}
 			
 			// By default, privilege level for editing table is 5 
-			if (! isset($f['id']->globalvalues['privilege'])) $f['id']->globalvalues['privilege'] = 5;
+			if (! isset($f['id']->global_privilege)) $f['id']->global_privilege = 5;
 				
 			return $f;
 				
@@ -530,7 +586,7 @@
 			if ($this->isTable($d))
 			{
 				// Load field info from table comment
-				// FIXME: ce code n'est pas fonctionnel !!! 
+				// FIXME: non-functional code !!! 
 	   			ierror('non-functional code at '. __FILE__ . " " . __LINE__);
 				$f = $this->tableFields($d);
 			}
@@ -541,7 +597,10 @@
 				$clinst = new $claz();
 				if (isset($clinst->bddvarstext))
 					foreach($clinst->bddvarstext as $field){
-						$fi = new fieldFormat($table);
+						// Workaround as info is expected to be an array generated by MySQL
+						// And so contain a field 'Comment' to store config
+						$a['Comment'] =  $clinst->textDbbrowserConfig[$field];
+						$fi = new fieldFormat($table,$a);
 						$fi->loadTexte($field);
 						$f[$field] = $fi;
 						$this->totalTextFields++;
@@ -611,15 +670,22 @@
 				else {
 					if ($tableformat) $out.='<td>';
 						else
-							$out.='<p><label for="'.$this->fieldsInfo[$field]->formatLabel().'">'.
-									$this->fieldsInfo[$field]->formatLabel().'</label>';
+							$out.='<p><label for="'.$field.'">'.
+									$this->fieldsInfo[$field]->formatLabel('edit').'</label>';
 					if ($refTable != '')
 					{
 						// reference to another table
-						$claz = ucfirst($refTable);
+						if ($refTable == 'dynamicmode') {
+							// Table name is generated dynamically based on $rec content
+							$getref_function = 'dbbrowser_'.$field.'_getReference';
+							$claz = $rec->$getref_function();
+						}
+						else
+							// static reference to table
+							$claz = ucfirst($refTable);
 						$cl = new $claz();
 						$cl->charger_id($rec->$field);
-						$name = $this->getName($cl);
+						$name = $this->dbbrowser_getName($cl);
 						// If we could not figure out the name, simply show the value
 						if (! isset($name)) $name = $rec->$field;
 						if ($this->fieldsInfo[$field]->global_access != 'ro')
@@ -664,7 +730,7 @@
 			$this->fieldsInfo = $this->tableFields($table);
 			$this->textfieldsInfo = $this->textFields($table);
 			
-			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->globalvalues['privilege']) {
+			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->global_privilege) {
 				ierror('internal error (permission level insufficient) at '. __FILE__ . " " . __LINE__);
 				return ;
 			}
@@ -749,7 +815,7 @@
 			{
 				$out.='<tr>';
 				$optinst = new $optionstable($row['id']);
-				$out.='<td><label>'.$this->getName($optinst).'</label></td>';
+				$out.='<td><label>'.$this->dbbrowser_getName($optinst).'</label></td>';
 				
 				// Check if this option is already selected
 				$jt = new $table();
@@ -793,7 +859,8 @@
 			$this->out.=$out;
 		}
 		
-		// Returns a list of <td>'s containing the text fields associated with $table
+		// Returns a list of <td>'s containing the text field names associated with $table
+		// Used to display table header 
 		function rowTextFields($table)
 		{
 			$d = $table.'desc';
@@ -816,7 +883,7 @@
 			if ($clinst && count($clinst->bddvarstext))
 			{
 				foreach ($clinst->bddvarstext as $field)
-				$out.='<td>'.$field.'</td>';
+					if ($this->textfieldsInfo[$field]->list_display) $out.='<td>'.$field.'</td>';
 			}
 				
 			return $out;
@@ -858,9 +925,10 @@
 				foreach ($tinst->bddvarstext as $field) {
 					$t = new Texte();
 					if ($t->charger($table,$field,$id)) {
-						$out.=$this->textfieldsInfo[$field]->formatListInput($t->description);
+						if ($this->textfieldsInfo[$field]->list_display)
+							$out.=$this->textfieldsInfo[$field]->formatListInput($t->description);
 					}
-					else $out.='<td>-</td>';
+					else if ($this->textfieldsInfo[$field]->list_display) $out.='<td>-</td>';
 				}
 			}
 				
@@ -908,7 +976,7 @@
 						if ($field != 'id' and $field != 'lang' and $field != $table) {
 							if ($tableformat) $out.='<td>';
 								else $out.='<p>';
-							$out.='<label for="'.$this->textfieldsInfo[$field]->formatLabel().'">'.$this->textfieldsInfo[$field]->formatLabel().'</label>';
+							$out.='<label for="'.$field.'">'.$this->textfieldsInfo[$field]->formatLabel('edit').'</label>';
 							$out.= $this->textfieldsInfo[$field]->formatEditInput($val, $suffix);
 							if ($tableformat) $out.='</td>';
 								else $out.='</p>';
@@ -946,8 +1014,8 @@
 				// We use bddvarstext to order fields in specific order
 				foreach ($clinst->bddvarstext as $field) {
 					if ($tableformat) $out.='<td>';
-						else $out.='<p><label for="'.$this->textfieldsInfo[$field]->formatLabel().
-									'">'.$this->textfieldsInfo[$field]->formatLabel().'</label>';
+						else $out.='<p><label for="'.$field.
+									'">'.$this->textfieldsInfo[$field]->formatLabel('edit').'</label>';
 					$out.=$this->textfieldsInfo[$field]->formatEditInput($row[$idx[$field]]['description'], $suffix);
 					if ($tableformat) $out.='</td>';
 						else $out.='</p>';
@@ -958,11 +1026,14 @@
 		}
 		
 		// Update record in database, according to values sent by user
-		function updateRecord($id, $table)
+		// forceprivilege can be used when update requested from a plugin following
+		// a request from an anonymous visitor
+		function updateRecord($id, $table, $forceprivilege = false)
 		{
 			
 			$this->fieldsInfo = $this->tableFields($table);				
-			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->globalvalues['privilege']) {
+			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->global_privilege ||
+					$forceprivilege) {
 				ierror('internal error (permission level insufficient) at '. __FILE__ . " " . __LINE__);
 				return ;
 			}
@@ -975,19 +1046,17 @@
 			{
 				$val = isset($_REQUEST[$field]);
 				$val2 = $_REQUEST[$field];
-				if (isset($_REQUEST[$field]))
-				{
-					$locf = 'dbb_'.$field;
-					$locf2 = $table.'_dbb_'.$field;
-					if (method_exists($rec,$locf))
-						// Specific processing exists in class for this field
-						$rec->$field = $rec->$locf('update');
-					elseif (method_exists($this->wa,$locf2))
-						// Specific processing exists in this for this field
-						$this->wa->$locf2($rec, 'update');
-					else {
+				$locf = 'dbb_'.$field;
+				$locf2 = $table.'_dbb_'.$field;
+				if (method_exists($rec,$locf))
+					// Specific processing exists in class for this field
+					$rec->$field = $rec->$locf('update');
+				elseif (method_exists($this->wa,$locf2))
+					// Specific processing exists in this for this field
+					$this->wa->$locf2($rec, 'update');
+				else {
+					if (isset($_REQUEST[$field]))
 						$rec->$field = $_REQUEST[$field];
-					}
 				}
 			}
 			if ($rec->id) $rec->maj();
@@ -1111,9 +1180,9 @@
             	}
             	            	 
             }
-			else if (method_exists($claz,'dropListTable')) {
+			else if (method_exists($claz,'dbbrowser_dropListTable')) {
 				// Specific processing exists in class
-				$out.= $claz->dropListTable();
+				$out.= $claz->dbbrowser_dropListTable();
 			}
 			else if (method_exists($this->wa,$dropf)) {
 				// Specific processing exists in $this for this field
@@ -1154,23 +1223,23 @@
 			return $out;
 				
 		}
-		// Return a string to show to 'represent the record referenced by class instance $claz
+		// Return a string to show to 'represent the record referenced by class instance $clinst
 		// returned value is for exmaple used to create link to record referenced by another table
-		function getName($claz)
+		function dbbrowser_getName($clinst)
 		{
 			// Check if desc table existsand retrieve titre if it does 
 			// useful for standard Thelia classes
-			$desc = $claz->table.'desc';
-			$locf = $claz->table.'_name';
+			$desc = $clinst->table.'desc';
+			$locf = $clinst->table.'_name';
 			if (method_exists($this->wa,$locf))
-				$out = $this->wa->$locf($claz->id);
-			else if (method_exists($claz, 'getName'))
-				$out = $claz->getName();
+				$out = $this->wa->$locf($clinst->id);
+			else if (method_exists($clinst, 'dbbrowser_getName'))
+				$out = $clinst->dbbrowser_getName();
 			else if ($this->isTable($desc))
 			{
 				// Retrieve titre
-				$n = $claz->table;
-				$query = "SELECT titre FROM $desc WHERE $n='$claz->id' AND  lang='".$this->lang."'";
+				$n = $clinst->table;
+				$query = "SELECT titre FROM $desc WHERE $n='$clinst->id' AND  lang='".$this->lang."'";
 				$result = mysql_query($query);
 				if (!$result) {
 					// Should never happen
@@ -1185,13 +1254,13 @@
 				// retrieve field titre from table texte in case it exists
 				// Useful for IAD plugins
 				$t = new Texte();
-				$t->charger($claz->table,'titre',$claz->id, $this->lang);
-				// Worst case, description is empty...
-				$out = $t->description;
+				if ($t->charger($clinst->table,'titre',$clinst->id, $this->lang))
+					// Worst case, description is empty...
+					$out = $t->description;
 				
 				// If field not in Texte table, last attempt, try field 'nom' in current table
-				if ($out == '' && in_array('nom',$claz->bddvars))
-					$out = $claz->nom;
+				if (!isset($out) && in_array('nom',$clinst->bddvars))
+					$out = $clinst->nom;
 			}
 			return $out;
 		}

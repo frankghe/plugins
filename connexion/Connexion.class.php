@@ -139,8 +139,9 @@
 		
 		public function apresdeconnexion($client){
 			
+			if (!isset($client)) return ; // Strange, should not happen...
 			if (! $this->charger_client_enligne($client))
-				return ierror('internal error (deconnexion but connexion does not exist...) at '. __FILE__ . " " . __LINE__);
+				return ierror('internal error (deconnexion but client ('.$client.') does not exist...) at '. __FILE__ . " " . __LINE__);
 			
 			$this->conn_logout = date ("Y-m-d H:i:s");			
 			$this->maj();
