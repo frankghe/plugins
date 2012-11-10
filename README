@@ -1,6 +1,6 @@
 /*-----------------------------------------------------------------------------------*/
-/*		email : aad@ghenassia.org                                                    */
-/*      web : http://frankghe.wordpress.com                                          */
+/*		email : frank@mainslibres.fr                                                 */
+/*      web : http://www.mainslibres.fr                                              */
 /*-----------------------------------------------------------------------------------*/
 
 
@@ -71,3 +71,6 @@ dans le fichier xml de chaque plugin):
  - webmtg:
  Permet la gestion de rendez-vous entre clients (par exemple a travers un mecanisme de chat)
   
+ - snippet:
+ Gestion de morceaux de pages html stockes dans la base de données, permettant la mise à jour par
+ une interface Web, et donc par les utilisateurs (avec les droits suffisants) eux-memes
