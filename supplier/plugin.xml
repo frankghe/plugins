@@ -9,7 +9,7 @@
  	<description>Manage a list of suppliers</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/supplier.zip</install>
 </plugin>

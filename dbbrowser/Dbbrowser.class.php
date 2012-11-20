@@ -185,7 +185,10 @@
 						$out.='</select>';
 						break;
 					case 'text':
-						$out = '<textarea  name="'.$this->name.$namesuffix.'" cols="120" rows="10"/>'.$value.'</textarea>';
+						// Define text area according to current text size to display
+						$rows = round(strlen($value)/80);
+						(strlen($value)<60) ? $cols = 80 : $cols=120;
+						$out = '<textarea  name="'.$this->name.$namesuffix.'" cols="'.$cols.'" rows="'.$rows.'"/>'.$value.'</textarea>';
 						break;
 					default:
 						$out='format not supported';

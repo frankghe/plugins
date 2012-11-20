@@ -9,7 +9,7 @@
  	<description>Gestion des utilisateurs online/offline</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/connexion.zip</install>
 </plugin>

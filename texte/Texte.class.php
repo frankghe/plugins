@@ -87,6 +87,18 @@ include_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.
 				
 		}
 
+		// Support for dbbrowser
+		// Return the tablename referenced by current record, for field snipid
+		// Basically returns the tablename used by the class
+		public function dbbrowser_parent_id_getReference() {
+			$claz = ucfirst($this->nomtable);
+			$clinst = new $claz();
+				
+			return $clinst->table;
+		}
+		
+		
+		
 		public function destroy(){
 		}		
 

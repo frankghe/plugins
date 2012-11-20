@@ -9,7 +9,7 @@
  	<description>Gestion de tags à associer à d'autres ""objects" tels que les services et les produits</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/tag.zip</install>
 </plugin>

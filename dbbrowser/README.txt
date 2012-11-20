@@ -1,6 +1,6 @@
 
 
-Veuillez simplement glisser le répertoire dbbrowser dans le dossier client/plugins de votre Thelia puis activer le plugin.
+Veuillez simplement glisser le répertoire snippet dans le dossier client/plugins de votre Thelia puis activer le plugin.
 
 Attention, ce plugin requiere le plugin PluginsThext.
 

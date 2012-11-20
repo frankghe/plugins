@@ -819,7 +819,7 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 			while ($row =  mysql_fetch_assoc($result)) {
 				if ($row['id'] == $this->id) $sel = 'selected';
 				else $sel = '';
-				$out.= '<option value="'.$this->id.'" '.$sel.'>'.$row[$this->getNameFieldName()].'</option>';
+				$out.= '<option value="'.$this->id.'" '.$sel.'>'.$row[$this->dbbrowser_getNameFieldName()].'</option>';
 			}
 				
 			return $out;

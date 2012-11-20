@@ -9,7 +9,7 @@
  	<description>Porte-monnaie electronique gere au sein du site</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/wallet.zip</install>
 </plugin>

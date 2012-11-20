@@ -9,7 +9,7 @@
  	<description>Ce plugin permet la gestion de télé-conférence.</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/bbb.zip</install>
 </plugin>

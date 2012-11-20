@@ -9,7 +9,7 @@
  	<description>Gestion de réunions par Internet</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/webmtg.zip</install>
 </plugin>

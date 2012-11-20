@@ -9,7 +9,7 @@
  	<description>Gestion des catégories principales pour classifier les services (en support du module Service).</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/category.zip</install>
 </plugin>

@@ -9,7 +9,7 @@
  	<description>Enregistrement de demandes clients (contact, devis)</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/contact.zip</install>
 </plugin>

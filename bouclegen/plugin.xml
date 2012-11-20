@@ -9,7 +9,7 @@
  	<description>Ce plugin permet la generation de boucles avec requetes SQL particulieres.</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/bouclegen.zip</install>
 </plugin>

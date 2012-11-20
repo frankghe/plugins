@@ -9,7 +9,7 @@
  	<description>Ce plugin permet la notation de produits achetés.</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/notecommande.zip</install>
 </plugin>

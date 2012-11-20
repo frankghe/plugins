@@ -9,7 +9,7 @@
  	<description>Ce plugin permet de gerer un CV associe au client.</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/cvitae.zip</install>
 </plugin>
