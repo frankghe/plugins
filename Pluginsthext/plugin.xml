@@ -6,10 +6,10 @@
 	<type>classique</type>
  	<auteur>Frank Ghenassia - frank@ghenassia.org</auteur>
  	<thelia>1.5.1</thelia>
- 	<description>Plugin qui facilite l'écriture de plugins...</description>
+ 	<description>Plugin qui facilite l'écriture de plugins...  <a href="http://www.mainslibres.fr/blog/2012/11/11/plugin-thelia-pluginthext/">Plus d'informations</a></description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation>http://www.mainslibres.fr/blog/2012/11/11/plugin-thelia-pluginthext/</documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/thext.zip</install>
 </plugin>

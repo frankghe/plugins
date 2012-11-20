@@ -119,6 +119,8 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 					// All texte fields are replaced automatically
 					if (isset($i->bddvarstext))
 						foreach ($i->bddvarstext as $key => $val){
+							if (! isPlugin('Texte'))
+								ierror('internal error (texte plugin needed) at '. __FILE__ . " " . __LINE__);
 							$t = new Texte();
 							$t->charger($table, $val, $row->id, $_SESSION['navig']->lang);
 							$i->valtext[$val] = $t->description;
@@ -268,6 +270,8 @@ include_once(realpath(dirname(__FILE__)) . "/../../../classes/PluginsTransports.
 										
 						// Tous les champs textuels sont remplaces automatiquement
 						foreach ($this->bddvarstext as $key => $val){
+							if (! isPlugin('Texte'))
+								ierror('internal error (texte plugin needed) at '. __FILE__ . " " . __LINE__);
 							$t = new Texte();
 							$t->charger($this->table, $val, $curid, $_SESSION['navig']->lang);
 							$htmlTag = '#'.strtoupper($val);

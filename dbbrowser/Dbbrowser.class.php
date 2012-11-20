@@ -992,6 +992,8 @@
 			$tinst = new $table();
 			if (!empty($tinst->bddvarstext)) {
 				foreach ($tinst->bddvarstext as $field) {
+					if (! isPlugin('Texte'))
+						ierror('internal error (texte plugin needed) at '. __FILE__ . " " . __LINE__);
 					$t = new Texte();
 					if ($t->charger($table,$field,$id)) {
 						if ($this->textfieldsInfo[$field]->list_display)
@@ -1062,6 +1064,8 @@
 				$clinst = new $claz();
 			if ($clinst && count($clinst->bddvarstext))
 			{
+				if (! isPlugin('Texte'))
+					ierror('internal error (texte plugin needed) at '. __FILE__ . " " . __LINE__);
 				// Texte table is used for this class, let's retrieve the fields
 				$query = "SELECT nomchamp,description FROM texte WHERE nomtable='".$table."' and parent_id='".$id."'".
 						" and lang='".$this->lang."'";
@@ -1203,6 +1207,8 @@
 				foreach ($tinst->bddvarstext as $t) {
 					// Check if field already stored in db
 					// then either update or add
+					if (! isPlugin('Texte'))
+						ierror('internal error (texte plugin needed) at '. __FILE__ . " " . __LINE__);
 					$tfield = new Texte();
 					if ($tfield->charger($table,$t,$id)) {
 						$tfield->description = $_REQUEST[$t];
@@ -1335,6 +1341,8 @@
 			}
 			else
 			{
+				if (! isPlugin('Texte'))
+					ierror('internal error (texte plugin needed) at '. __FILE__ . " " . __LINE__);
 				// retrieve field titre from table texte in case it exists
 				// Useful for IAD plugins
 				$t = new Texte();
