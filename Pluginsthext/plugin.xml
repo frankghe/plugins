@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding='UTF-8'?>
+﻿<?xml version="1.0" encoding='UTF-8'?>
 <plugin>
 	<nom>Thelia Extension</nom>
  	<version>1.0</version>
@@ -9,7 +9,7 @@
  	<description>Plugin qui facilite l'écriture de plugins...</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>http://www.mainslibres.fr/blog/2012/11/11/plugin-thelia-pluginthext/</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/thext.zip</install>
 </plugin>

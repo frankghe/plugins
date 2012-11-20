@@ -1,19 +1,14 @@
 /*-----------------------------------------------------------------------------------*/
-/*		email : aad@ghenassia.org                                                    */
-/*      web : http://frankghe.wordpress.com                                          */
+/*		email : frank@mainslibres.fr                                                 */
+/*      web : http://www.mainslibres.fr                                              */
 /*-----------------------------------------------------------------------------------*/
 
 
 Ce repertoire contient un ensemble de plugins pour le moteur eCommerce Thelia.
 
-Ces plugins servent a etendre les services de base Thelia pour ajouter des fonctionnalites
-liees au support a distance et aux mecanismes associes qui permettent de monetiser ce support.
-
-De nouveaux plugins sont aussi ajoutes pour actives des fonctionnalites typiques de gestion communautaire.
- 
-L'ensemble de ces plugins snot regroupes sous le nom 'aad': Assistance A Distance.  Les plugins AAD 
-sont les suivants (attention, seuls certains plugins sont utilisables en production, voire le statut
-dans le fichier xml de chaque plugin):
+Ces plugins servent a etendre les services de base Thelia pour ajouter diverses fonctionnalites
+liees en particulier au support a distance et aux mecanismes associes qui permettent de monetiser 
+ce support. Ces plugins permettent aussi la mise a jour du site par les utilisateurs eux-memes.
  
  - extclient: 
  Etend les informations disponibles pour les clients sans alterer le moteur lui-meme, 
@@ -24,7 +19,7 @@ dans le fichier xml de chaque plugin):
  
  - bouclegen: 
  Propose une boucle generique qui permet d'effectuer des requetes directement sur 
- les tables depuis le code html, tout en beneficier du mecanisme de boucle natif Thelia
+ les tables depuis le code html, tout en beneficiant du mecanisme de boucle natif Thelia
  
  - chat:
  Integre un mecanisme de chat a Thelia et permet aux visiteurs de discuter entre eux
@@ -71,3 +66,6 @@ dans le fichier xml de chaque plugin):
  - webmtg:
  Permet la gestion de rendez-vous entre clients (par exemple a travers un mecanisme de chat)
   
+ - snippet:
+ Gestion de morceaux de pages html stockes dans la base de données, permettant la mise à jour par
+ une interface Web, et donc par les utilisateurs (avec les droits suffisants) eux-memes

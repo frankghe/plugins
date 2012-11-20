@@ -40,19 +40,19 @@ class wa_functions extends Cnx {
 		return $this->dbbinst->dropListTable('lang','description','id', $current);
 	}
 	
-	function raison_name($id){
+	function raison_getName($id){
 		return $this->dbbinst->getField('raisondesc','court','raison',$id);
 	}
 	
-	function lang_name($id){
+	function lang_getName($id){
 		return $this->dbbinst->getField('lang','description','id',$id);
 	}
 	
-	function adresse_name($id){
+	function adresse_getName($id){
 		return $this->dbbinst->getField('adresse','ville','id',$id);
 	}
 	
-	function client_name($id){
+	function client_getName($id){
 		$c = new Client($id);
 		return $c->prenom.' '.$c->nom;
 	}

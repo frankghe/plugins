@@ -60,8 +60,11 @@ include_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.
 		}
 		
 		
-		// Support function for bddbrowser
-		public function fieldlookup($field)
+		//
+		// Support functions for dbbrowser plugin
+		//
+		
+		public function dbbrowser_fieldlookup($field)
 		{
 			switch ($field) {
 				case 'supplier':

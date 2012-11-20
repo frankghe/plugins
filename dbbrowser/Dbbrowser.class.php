@@ -2,6 +2,33 @@
 	require_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.php");
 	require_once(realpath(dirname(__FILE__)) . "/thelia_wa.php");
 
+	loadInstalledPlugins();
+
+	// FIXME: should be smarter and only load those php files useful for
+	// current list/record being displayed
+	function loadClassEngine() {
+		$dir = realpath(dirname(__FILE__) . "/../../../classes/");
+		if ($handle = opendir($dir)) {
+			while (false !== ($entry = readdir($handle))) {
+				$locdir = $dir . "\\" . $entry;
+				if ($entry[0] != "." && ! is_dir($locdir) &&
+					/*
+					 * remove all classes not managing tables
+					 */
+					strpos($entry, "Actions") === false &&
+					strpos($entry, "Cache") === false &&
+					strpos($entry, "Cnx") === false	&&
+					strpos($entry, "Statut") === false) {
+					require_once(realpath($dir . "\\" . $entry));
+				}
+			}
+			closedir($handle);
+		}		
+	}
+	
+	loadClassEngine();
+	
+	
 	//
 	// Installation:
 	// . copy the images included in the dbbrowser directory to $root/template/_gfx
@@ -34,11 +61,23 @@
 		{
 			if (isset($info))
 				$this->dbinfo = $info;
-			
+
 			if (! isset($this->dbinfo)) {
 				// Should never happen
 				ierror('internal error ('.$query.') at '. __FILE__ . " " . __LINE__);
 				exit;
+			}
+			
+			// If a configuration is defined in Class, it takes precedence over db info
+			if (isset($this->table)) {
+				$claz = ucfirst($this->table);
+				if (class_exists($claz)) {
+					$clinst = new $claz();
+					if (isset($clinst->textDbbrowserConfig) &&
+						isset($clinst->textDbbrowserConfig[$this->dbinfo['Field']])) {
+						$this->dbinfo['Comment'] = $clinst->textDbbrowserConfig[$this->dbinfo['Field']];
+					}
+				}
 			}
 			
 			// Retrieve formatting info stored in Comment field of database:
@@ -123,8 +162,17 @@
 					case 'int':
 					case 'char':
 					case 'float':
-					case 'datetime':						
-						$out = '<input  type="text" name="'.$this->name.$namesuffix.'" value="'.$value.'"/>';
+						$out.= '<input  type="text" name="'.$this->name.$namesuffix.'" value="'.$value.'"/>';
+						break;
+					case 'datetime':	
+						$id = $this->name.$namesuffix;
+						$formatedvalue = date('Y-m-d H:i:s', strtotime($value));
+						$out = '    <script>
+								    $(function() {
+								    	$( "#'.$id.'" ).datepicker({dateFormat: "yy-mm-dd"});
+									});
+								    </script>';
+						$out.= '<input  type="text" name="'.$id.'" id="'.$id.'" value="'.$value.'"/>';
 						break;
 					case 'bool':
 						$out ='<select name="'.$this->name.$namesuffix.'">';
@@ -178,14 +226,16 @@
 			$out = '';
 			switch ($mode) {
 				case 'edit':
-					if ($this->edit_display)
-						if ($this->global_label != '') $out = $this->global_label;
-						else $out = $this->name; 
-					break;
-				case 'list':
-					if ($this->list_display)
+					if ($this->edit_display) {
 						if ($this->global_label != '') $out = $this->global_label;
 						else $out = $this->name;
+					} 
+					break;
+				case 'list':
+					if ($this->list_display) {
+						if ($this->global_label != '') $out = $this->global_label;
+						else $out = $this->name;
+					}
 					break;
 				default:
 					break;				
@@ -197,6 +247,14 @@
 		// Or an empty string 
 		public function isReference()
 		{
+			
+			// If Class to manage table includes support for this reference
+			// then return info and we'll call the function to get table info dynamically
+			// when we build the table content
+			$claz = ucfirst($this->table);
+			if (method_exists($claz,'dbbrowser_'.$this->name.'_getReference'))
+				return 'dynamicmode';
+			
 			$ref = '';
 			if ($this->dbinfo['Type'] == 'int(11)')
 				$ref = $this->name;
@@ -237,7 +295,6 @@
 	class Dbbrowser extends PluginsThext{
 
 		const TABLE="dbbrowser";
-		const RECORDPAGE="dbbrowser";
 		const DEFLISTCOLUMNS = 5;
 		const LNKPAGES = 2;
 		const MAXPERPAGE = 10;
@@ -258,6 +315,15 @@
  			  $this->charger($id);
 
 			$this->isJoinTable = false;
+			
+			$this->privilege_ok = $_SESSION['navig']->extclient->privilege >= $info['id']->global_privilege ||
+									$_SESSION['util']->profil == "1";		
+
+			/*
+			 * By default, assume that generated back-office is displayed
+			 * If different, change urlshow to something else after the constructor
+			 */
+			$this->urlshow = 'module.php?nom=dbbrowser';
 		}
 
 		public function init(){
@@ -277,6 +343,8 @@
 				case 'dbbrowser_update':
 					$this->updateRecord($_REQUEST['id'], $_REQUEST['table']);
 					break;
+				case 'dbbrowser_deleterecord':
+					$this->deleteRecord($_REQUEST['id'], $_REQUEST['table']);
 				default :
 					break;
 			}
@@ -289,11 +357,15 @@
 				case 'dbbrowser_showtables':
 					foreach ($this->tables as $t) {
 						$info = $this->tableFields($t);
-						if ($_SESSION['navig']->extclient->privilege >= $info['id']->globalvalues['privilege'])
-							$this->out.='<a href="'.urlfond(dbbrowser).'&action=dbbrowser_showlist&table='.$t.'">'.$t.'</a><br>';
+						if ($this->privilege_ok)
+							$this->out.='<a href="'.$this->urlshow.'&action=dbbrowser_showlist&table='.$t.'">'.$t.'</a><br>';
 					}
 					break ;
+				// delete is manage through action()
+				// update via showDB means that we 'return' from a delete and 
+				// want to actually display the list corresponding to the table...
 				case 'dbbrowser_showlist':
+				case 'dbbrowser_deleterecord':
 					if (isset($_REQUEST['start'])) $s = $_REQUEST['start'];
 						else $s = 0;
 					$this->out.= $this->showList($_REQUEST['table'],$s,10);
@@ -332,7 +404,7 @@
 			$this->fieldsInfo = $this->tableFields($table);
 			$this->textfieldsInfo = $this->textFields($table);
 			
-			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->globalvalues['privilege']) {
+			if (! $this->privilege_ok) {
 				ierror('internal error (permission level insufficient) at '. __FILE__ . " " . __LINE__);
 				return ;
 			}
@@ -344,8 +416,10 @@
 					exit;
 			}
 			
+			$out = '<h2>Edition de la table <em>'.$_REQUEST['table'].'</em></h2>';
+			
 			// Add link for item creation
-			$out = '<a href="'.urlfond(dbbrowser).'&action=dbbrowser_editrecord&table='.
+			$out.= '<a href="'.$this->urlshow.'&action=dbbrowser_editrecord&table='.
 					$_REQUEST['table'].'&id=0">Ajout</a><br />';
 				
 			$out.= '<table>';
@@ -388,10 +462,10 @@
 			while ($row = mysql_fetch_assoc($result)) {
 				$out.='<tr>';
 				// Add edition links (edit, delete)
-				$dellink = '<a href="'.urlfond(self::RECORDPAGE).'&action=dbbrowser_editrecord&table='.
-								$table.'&id='.$row['id'].'"><img src="template/_gfx/db_recordremove.png"></a>';
-				$edilink = '<a href="'.urlfond(self::RECORDPAGE).'&action=dbbrowser_editrecord&table='.
-								$table.'&id='.$row['id'].'"><img src="template/_gfx/db_recordedit.png"></a>';
+				$dellink = '<a href="'.$this->urlshow.'&action=dbbrowser_deleterecord&table='.
+								$table.'&id='.$row['id'].'"><img src="'.urlsite().'/client/plugins/dbbrowser/db_recordremove.png"></a>';
+				$edilink = '<a href="'.$this->urlshow.'&action=dbbrowser_editrecord&table='.
+								$table.'&id='.$row['id'].'"><img src="'.urlsite().'/client/plugins/dbbrowser/db_recordedit.png"></a>';
 				$out.='<td>'.$edilink.$dellink.'</td>';
 				// Show text fields
 				$out.= $this->listTextFields($row['id'],$table);
@@ -405,15 +479,31 @@
 						
 					if ($clname[$fitem->name] != '')
 					{
-						$claz = $clname[$fitem->name];
+						// If table being referenced is dynamically computed
+						// then we call the function from the class that
+						// will return the table name
+						if ($clname[$fitem->name] == 'dynamicmode') {
+							$cl = ucfirst($table);
+							$clinst = new $cl($row['id']);
+							$getref_function = 'dbbrowser_'.$fitem->name.'_getReference';
+							$claz = $clinst->$getref_function();
+						}
+						else
+							$claz = $clname[$fitem->name];
 						// create link to referenced table record
+						if (! class_exists($claz)) {
+							echo 'WARNINIG: trying to manage a reference to table <b>'.$claz.'</b> but no class available<br/>
+									either add information (in database field comment) to avoid considering this field as a reference<br/>
+									or make sure the corresponding class is available<br/>';
+							continue;
+						}
 						$cl = new $claz();
 						$cl->charger_id($row[$fitem->name]);
-						$name = $this->getName($cl);
+						$name = $this->dbbrowser_getName($cl);
 						// If we could not figure out the name, simply show the value
 						if (! isset($name) || $name == '') $name = $row[$fitem->name];
 						
-						$link = '<a href="'.urlfond(self::RECORDPAGE).'&action=dbbrowser_editrecord&table='.
+						$link = '<a href="'.$this->urlshow.'&action=dbbrowser_editrecord&table='.
 								strtolower($claz).'&id='.$row[$fitem->name].'">'.$name.'</a>';
 						
 						$out.='<td>'.$link.'</td>';
@@ -452,7 +542,7 @@
 				ierror('internal error (fieldsInfo not set) at '. __FILE__ . " " . __LINE__);
 				exit;
 			}
-			// If field type is not int(11) then field can not be a reference to another table
+			// $field must be a reference to another table to continue
 			if ($this->fieldsInfo[$field]->isReference() == '')
 				return '';
 			
@@ -461,11 +551,11 @@
 			else
 			{
 				$locf = $table.'_fieldlookup';
-				if (method_exists(ucfirst($table),'fieldlookup')) {
+				if (method_exists(ucfirst($table),'dbbrowser_fieldlookup')) {
 					// Specific processing exists in class for this field
 					$clname = ucfirst($table);
 					$c = new $clname();
-					$out = ucfirst($c->fieldlookup($field)); 
+					$out = ucfirst($c->dbbrowser_fieldlookup($field)); 
 				}
 				else if (method_exists($this->wa,$locf))
 				// Specific processing exists in this for this field
@@ -479,7 +569,8 @@
 		// Retrieve list of tables from database
 		function dbTables()
 		{
-			$db = Cnx::$db;
+			// Thelia 1.5.1: $db = Cnx::$db;
+			$db = THELIA_BD_NOM;
 			$sql = "SHOW TABLES FROM $db";
 			$result = mysql_query($sql);
 			
@@ -499,7 +590,8 @@
 		{
 			$found = false;
 			
-			$db = Cnx::$db;
+			// Thelia 1.5.1: $db = Cnx::$db;
+			$db = THELIA_BD_NOM;
 			$sql = "SHOW TABLES FROM $db LIKE '$table'";
 			$result = mysql_query($sql);
 				
@@ -530,7 +622,7 @@
 			}
 			
 			// By default, privilege level for editing table is 5 
-			if (! isset($f['id']->globalvalues['privilege'])) $f['id']->globalvalues['privilege'] = 5;
+			if (! isset($f['id']->global_privilege)) $f['id']->global_privilege = 5;
 				
 			return $f;
 				
@@ -544,9 +636,19 @@
 			$d = $table.'desc';
 			if ($this->isTable($d))
 			{
+				if (0) {
 				// Load field info from table comment
 				// FIXME: non-functional code !!! 
-	   			ierror('non-functional code at '. __FILE__ . " " . __LINE__);
+	   			$textfield = array ( "titre" , "chapo" );
+	   			foreach($textfield as $field){
+	   				// FIXME: we assume that no configuration stored for text fields of desc tables
+	   				$a['Comment'] =  '';
+	   				$fi = new fieldFormat($d,$a);
+	   				$fi->loadTexte($field);
+	   				$f[$field] = $fi;
+	   				$this->totalTextFields++;
+	   			}
+				}
 				$f = $this->tableFields($d);
 			}
 				
@@ -557,7 +659,7 @@
 				if (isset($clinst->bddvarstext))
 					foreach($clinst->bddvarstext as $field){
 						// Workaround as info is expected to be an array generated by MySQL
-						// And so contain a field 'Comment' to stre config
+						// And so contain a field 'Comment' to store config
 						$a['Comment'] =  $clinst->textDbbrowserConfig[$field];
 						$fi = new fieldFormat($table,$a);
 						$fi->loadTexte($field);
@@ -634,10 +736,23 @@
 					if ($refTable != '')
 					{
 						// reference to another table
-						$claz = ucfirst($refTable);
+						if ($refTable == 'dynamicmode') {
+							// Table name is generated dynamically based on $rec content
+							$getref_function = 'dbbrowser_'.$field.'_getReference';
+							$claz = $rec->$getref_function();
+						}
+						else
+							// static reference to table
+							$claz = ucfirst($refTable);
+						if (! class_exists($claz)) {
+							echo 'WARNINIG: trying to manage a reference to table <b>'.$refTable.'</b> but no class available<br/>
+									either add information (in database field comment) to avoid considering this field as a reference<br/>
+									or make sure the corresponding class is available<br/>';
+							continue ;
+						}
 						$cl = new $claz();
 						$cl->charger_id($rec->$field);
-						$name = $this->getName($cl);
+						$name = $this->dbbrowser_getName($cl);
 						// If we could not figure out the name, simply show the value
 						if (! isset($name)) $name = $rec->$field;
 						if ($this->fieldsInfo[$field]->global_access != 'ro')
@@ -645,7 +760,7 @@
 							$dl = $this->dropList($cl);
 							if ($tableformat) $link = '';
 								else 
-									$link = '<a href="'.urlfond(self::RECORDPAGE).
+									$link = '<a href="'.$this->urlshow.
 											'&action=dbbrowser_editrecord&table='.$field.'&id='.
 											$rec->$field.'">'.$name.'</a>';
 							$out.=$dl.$link;
@@ -682,11 +797,13 @@
 			$this->fieldsInfo = $this->tableFields($table);
 			$this->textfieldsInfo = $this->textFields($table);
 			
-			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->globalvalues['privilege']) {
+			if (! $this->privilege_ok) {
 				ierror('internal error (permission level insufficient) at '. __FILE__ . " " . __LINE__);
 				return ;
 			}
 							
+			$this->out.= '<h2>Enregistrement de la table <em>'.$_REQUEST['table'].'</em></h2>';
+			
 			$this->out.='<input type="hidden" name="action" value="dbbrowser_update" />';
 			$this->out.='<input type="hidden" name="table" value="'.$table.'" />';
 			$rec = $this->loadFields($id, $table);
@@ -699,7 +816,7 @@
 				$t = $table.$tablename;
 				if ($this->isTable($t)) {
 					$this->out.='<p><label">'.$t.'(nom a changer)</label>';
-					$link = '<a href="'.urlfond(self::RECORDPAGE).'&action=dbbrowser_editjoinrecord&'.
+					$link = '<a href="'.$this->urlshow.'&action=dbbrowser_editjoinrecord&'.
 							'parenttable='.$table.'&table='.$t.'&id='.$id.'">'.$t.'(nom a changer!)</a></p>';
 					$this->out.=$link;
 				}
@@ -767,7 +884,7 @@
 			{
 				$out.='<tr>';
 				$optinst = new $optionstable($row['id']);
-				$out.='<td><label>'.$this->getName($optinst).'</label></td>';
+				$out.='<td><label>'.$this->dbbrowser_getName($optinst).'</label></td>';
 				
 				// Check if this option is already selected
 				$jt = new $table();
@@ -820,10 +937,10 @@
 			{
 				$f = $this->tableFields($d);
 				foreach ($f as $fitem)
-					if ($fitem['Field'] != 'id' &&
-							$fitem['Field'] != $table &&
-							$fitem['Field'] != 'lang')
-						$out.='<td>'.$fitem['Field'].'</td>';
+					if ($fitem->name != 'id' &&
+						$fitem->name != $table &&
+						$fitem->name != 'lang')
+						$out.='<td>'.$fitem->name.'</td>';
 				
 			}
 
@@ -977,12 +1094,30 @@
 			return $out;
 		}
 		
+		// Delete a record
+		// Warning: dependencies are unmanaged, ie. only referenced record is deleted
+		function deleteRecord($id, $table) {
+			if (! $this->isTable($table)) {
+				ierror('table '. $table .' does not exist  at '. __FILE__ . " " . __LINE__);
+				return ;
+				}
+			$query = "DELETE FROM " . $table . " WHERE id='". $id ."'";
+			$result = mysql_query($query);
+			if (!$result) {
+				// Should never happen
+				ierror('internal error ('.$query.') at '. __FILE__ . " " . __LINE__);
+				return ;
+			}	
+		}
+		
 		// Update record in database, according to values sent by user
-		function updateRecord($id, $table)
+		// forceprivilege can be used when update requested from a plugin following
+		// a request from an anonymous visitor
+		function updateRecord($id, $table, $forceprivilege = false)
 		{
 			
 			$this->fieldsInfo = $this->tableFields($table);				
-			if ($_SESSION['navig']->extclient->privilege < $this->fieldsInfo['id']->globalvalues['privilege']) {
+			if (! $this->privilege_ok || $forceprivilege) {
 				ierror('internal error (permission level insufficient) at '. __FILE__ . " " . __LINE__);
 				return ;
 			}
@@ -1129,9 +1264,9 @@
             	}
             	            	 
             }
-			else if (method_exists($claz,'dropListTable')) {
+			else if (method_exists($claz,'dbbrowser_dropListTable')) {
 				// Specific processing exists in class
-				$out.= $claz->dropListTable();
+				$out.= $claz->dbbrowser_dropListTable();
 			}
 			else if (method_exists($this->wa,$dropf)) {
 				// Specific processing exists in $this for this field
@@ -1172,23 +1307,23 @@
 			return $out;
 				
 		}
-		// Return a string to show to 'represent the record referenced by class instance $claz
+		// Return a string to show to 'represent the record referenced by class instance $clinst
 		// returned value is for exmaple used to create link to record referenced by another table
-		function getName($claz)
+		function dbbrowser_getName($clinst)
 		{
 			// Check if desc table existsand retrieve titre if it does 
 			// useful for standard Thelia classes
-			$desc = $claz->table.'desc';
-			$locf = $claz->table.'_name';
+			$desc = $clinst->table.'desc';
+			$locf = $clinst->table.'_getName';
 			if (method_exists($this->wa,$locf))
-				$out = $this->wa->$locf($claz->id);
-			else if (method_exists($claz, 'getName'))
-				$out = $claz->getName();
+				$out = $this->wa->$locf($clinst->id);
+			else if (method_exists($clinst, 'dbbrowser_getName'))
+				$out = $clinst->dbbrowser_getName();
 			else if ($this->isTable($desc))
 			{
 				// Retrieve titre
-				$n = $claz->table;
-				$query = "SELECT titre FROM $desc WHERE $n='$claz->id' AND  lang='".$this->lang."'";
+				$n = $clinst->table;
+				$query = "SELECT titre FROM $desc WHERE $n='$clinst->id' AND  lang='".$this->lang."'";
 				$result = mysql_query($query);
 				if (!$result) {
 					// Should never happen
@@ -1203,13 +1338,13 @@
 				// retrieve field titre from table texte in case it exists
 				// Useful for IAD plugins
 				$t = new Texte();
-				$t->charger($claz->table,'titre',$claz->id, $this->lang);
-				// Worst case, description is empty...
-				$out = $t->description;
+				if ($t->charger($clinst->table,'titre',$clinst->id, $this->lang))
+					// Worst case, description is empty...
+					$out = $t->description;
 				
 				// If field not in Texte table, last attempt, try field 'nom' in current table
-				if ($out == '' && in_array('nom',$claz->bddvars))
-					$out = $claz->nom;
+				if (!isset($out) && in_array('nom',$clinst->bddvars))
+					$out = $clinst->nom;
 			}
 			return $out;
 		}
@@ -1273,21 +1408,49 @@
 						
 			$i = $showstart;
 			if ($showstart>0) 
-				$out.='<a href="'.urlfond('dbbrowser').'&action=dbbrowser_showlist&table='.$table.'&start=0">first</a>&nbsp;';
+				$out.='<a href="'.$this->urlshow.'&action=dbbrowser_showlist&table='.$table.'&start=0">first</a>&nbsp;';
 			while ($i <= $showend)
 			{
 				if ($i == $start)
 					$out.= $i.'&nbsp;';
 				else 
-					$out.='<a href="'.urlfond('dbbrowser').'&action=dbbrowser_showlist&table='.$table.'&start='.$i.'">'.
+					$out.='<a href="'.$this->urlshow.'&action=dbbrowser_showlist&table='.$table.'&start='.$i.'">'.
 							$i.'</a>&nbsp;';
 				$i+= $nb;
 			}
 			if ($showend<($total-$nb)) 
-				$out.='<a href="'.urlfond('dbbrowser').'&action=dbbrowser_showlist&table='.$table.'&start='.($total-$nb).'">last</a>&nbsp;';
+				$out.='<a href="'.$this->urlshow.'&action=dbbrowser_showlist&table='.$table.'&start='.($total-$nb).'">last</a>&nbsp;';
 			
 			$out.='&nbsp;['.$total.']';
 			return $out;
+		}
+		
+		public function insertSQL($table, $data){
+			$fieldstring = $valuestring = '';
+			foreach ($data as $field => $value){
+				$fieldstring.=$field.",";
+				$valuestring.="'".mysql_real_escape_string($value)."',";
+			}
+			$fieldstring = substr($fieldstring,0,-strlen(','));
+			$valuestring =  substr($valuestring,0,-strlen(','));
+			$query = "insert into $table ($fieldstring) values ($valuestring)";
+			return $this->query($query);
+		}
+		
+		public function updateSQL($table, $data, $cond){
+			$fieldstring = $valuestring = '';
+			foreach ($data as $field => $value){
+				$v = mysql_real_escape_string($value);
+				$string.= "$field='$v' , ";
+			}
+			$string = substr($string,0,-strlen(', '));
+			foreach ($cond as $field => $value){
+				$v = mysql_real_escape_string($value);
+				$condstring.= "$field='$v' and ";
+			}
+			$condstring = substr($condstring,0,-strlen('and '));
+			$query = "update $table SET $string WHERE $condstring";
+			return $this->query($query);
 		}
 						
 	}

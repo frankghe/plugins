@@ -5,7 +5,7 @@ include_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.
 
 	// Cette fonction renvoie un tableau d'instance de classes Texte
 	// qui contient la liste des champs de la table Texte filtrees avec
-	// les champs nomtable et eventuelle;ent nomchamp
+	// les champs nomtable et eventuellement nomchamp
 	function charger_liste_texte($table,$nomchamp='')
 	{
 		$l = array();

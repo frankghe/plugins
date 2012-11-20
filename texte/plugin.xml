@@ -9,7 +9,7 @@
  	<description>Ce plugin permet de gerer des champs textuels en plusieurs.</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation>http://www.mainslibres.fr/blog/2012/11/14/texte-un-plugin-thelia/</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/texte.zip</install>
 </plugin>

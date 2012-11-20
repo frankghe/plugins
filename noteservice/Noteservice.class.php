@@ -58,86 +58,12 @@ include_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.
 		public function destroy(){
 		}		
 
-		public function processboucle($texte, $client){
-			
-			$ec = new Extclient();
-			$ec->charger_client($client);
-			
-			if ($ec->issupplier){
-				$sel = 'selected';
-				$avg = $this->stats('supplier', $client, 'avg');
-				$min = $this->stats('supplier', $client, 'min');
-				$max = $this->stats('supplier', $client, 'max');
-			}
-			else
-				$sel = $avg = $max = $min = '';
-			
-			$texte = str_replace("#ISSUPPLIER", "$sel", $texte);
-			$texte = str_replace("#SUPPLIER_NOTEAVG", $avg, $texte);
-			$texte = str_replace("#SUPPLIER_NOTEMIN", $min, $texte);
-			$texte = str_replace("#SUPPLIER_NOTEMAX", $max, $texte);
-			
-			$avg = $this->stats('client', $client, 'avg');
-			$min = $this->stats('client', $client, 'min');
-			$max = $this->stats('client', $client, 'max');
-			
-			$texte = str_replace("#NOTEAVG", $avg, $texte);
-			$texte = str_replace("#NOTEMIN", $min, $texte);
-			$texte = str_replace("#NOTEMAX", $max, $texte);
-			
-			return $texte;
-				
-		}
-		public function boucle($texte, $args){
-			
-			// récupération des arguments
-			$id = lireTag($args, "id");
-			$wallet = lireTag($args, "wallet");
-			
-			$search ="";
-			
-			$res="";
-			
-			// préparation de la requête
-			if ($id!="")  $search.=" and id=\"$id\"";
-			if ($wallet!="")  $search.=" and wallet=\"$wallet\"";
-				
-			
-			$query = "select * from ". self::TABLE . " where 1 $search";
-			
-			$result = $this->query($query);
-			
-			if ($result) {
-			
-				$nbres = $this->num_rows($result);
-			
-				if ($nbres > 0) {
-			
-					while( $row = $this->fetch_object($result)){
-			
-						$temp = $texte;
-			
-						$temp = str_replace("#TITRE", $row->titre, $texte);
-						$temp = str_replace("#NOTE", $row->note, $temp);
-						$temp = str_replace("#DESCRIPTION", $row->description, $temp);
-						$temp = str_replace("#DATE", substr($row->date, 0, 10), $temp);
-						$res .= $temp;
-					}
-				}
-			
-			}
-			
-			return $res;
-			
-				
-		}	
-
 		public function action(){
 
 			switch ($_REQUEST['action']) {
 				case 'ajoutnote':
 					
-					// We select all purchased services so that we can do patch processing of the notes
+					// We select all purchased services so that we can do batch processing of the notes
 					// This enables to build web page with multiple polls
 					$query = "select wallet.* from wallet where wallet.client='".$_SESSION['navig']->client->id."'";
 					$result = $this->query($query);

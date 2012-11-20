@@ -441,6 +441,35 @@
 				
 			
 		}
+
+		public function insertSQL($table, $data){
+			$fieldstring = $valuestring = '';
+			foreach ($data as $field => $value){
+				$fieldstring.=$field.",";
+				$valuestring.="'".mysql_real_escape_string($value)."',";
+			}
+			$fieldstring = substr($fieldstring,0,-strlen(','));
+			$valuestring =  substr($valuestring,0,-strlen(','));
+			$query = "insert into $table ($fieldstring) values ($valuestring)";
+			return $this->query($query);
+		}
+		
+		public function updateSQL($table, $data, $cond){
+			$fieldstring = $valuestring = '';
+			foreach ($data as $field => $value){
+				$v = mysql_real_escape_string($value);
+				$string.= "$field='$v' , ";
+			}
+			$string = substr($string,0,-strlen(', '));
+			foreach ($cond as $field => $value){
+			$v = mysql_real_escape_string($value);
+			$condstring.= "$field='$v' and ";
+			}
+			$condstring = substr($condstring,0,-strlen('and '));
+			$query = "update $table SET $string WHERE $condstring";
+			return $this->query($query);
+		}
+		
 		
 		public function action() {
 			

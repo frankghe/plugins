@@ -40,6 +40,13 @@ loadPlugin('dbbrowser');
 
 
 		public function action(){
+			switch ($_REQUEST['action']) {
+				case 'contact_update':
+					$this->fillFields($_REQUEST);
+					$this->add();
+					break;
+				default:
+			}
 		}
 		
 		// Support for dbbroswer - add current time

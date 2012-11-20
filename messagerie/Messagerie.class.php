@@ -104,8 +104,11 @@ include_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.
 					
 		}
 		
-		// Support function for dbbrowser
-		public function fieldlookup($field)
+		//
+		// Support functions for dbbrowser plugin
+		//
+		
+		public function dbbrowser_fieldlookup($field)
 		{
 			switch ($field) {
 				case 'client_src':
@@ -116,6 +119,17 @@ include_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.
 			}
 			return $out;
 		}
-	
+		
+		// Support for dbbrowser
+		// Return the tablename referenced by current record, for field snipid
+		// Basically return the field sniptype
+		public function dbbrowser_client_src_getReference() {
+			return 'client';
+		}
+		
+		public function dbbrowser_client_dst_getReference() {
+			return 'client';
+		}
+		
 	}
 ?>

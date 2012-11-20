@@ -9,7 +9,7 @@
  	<description>Navigateur et editeur de la base de donnees</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation></documentation>
+	<documentation> http://www.mainslibres.fr/blog/2012/11/19/dbbrowser-un-plugin-thelia/</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/dbbrowser.zip</install>
 </plugin>
