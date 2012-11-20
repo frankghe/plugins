@@ -170,7 +170,7 @@ EOD;
 			if ($_SESSION['navig']->connecte && 
 				$_SESSION['navig']->extclient->privilege >= $this->privilege_edit &&
 				$this->showConfig['edit']) {
-				$edit='<div><a href="javascript:void(0)" onclick="snippet_edit('.$this->id.');"><img src="mainslibres/images/solution.gif" width="10px"></a></div>';
+				$edit='<div><a href="javascript:void(0)" onclick="snippet_edit('.$this->id.');">e</a></div>';
 			}
 			else
 				$edit = '';
