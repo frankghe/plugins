@@ -1,6 +1,6 @@
 <?php
 	require_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.php");	
-	require_once(realpath(dirname(__FILE__)) . "/../texte/Texte.class.php");
+	loadPlugin("Texte");
 	
 	class Category extends PluginsThext{
 		const TABLE="category";

@@ -1,7 +1,6 @@
 <?php
 
 include_once(realpath(dirname(__FILE__)) . "/../Pluginsthext/PluginsThext.class.php");
-loadPlugin('dbbrowser');
 	
 	class Contact extends PluginsThext{
 

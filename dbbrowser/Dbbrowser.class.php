@@ -318,10 +318,8 @@
  			  $this->charger($id);
 
 			$this->isJoinTable = false;
+			$this->privilege_ok = false;
 			
-			$this->privilege_ok = $_SESSION['navig']->extclient->privilege >= $info['id']->global_privilege ||
-									$_SESSION['util']->profil == "1";		
-
 			/*
 			 * By default, assume that generated back-office is displayed
 			 * If different, change urlshow to something else after the constructor
@@ -332,10 +330,25 @@
 		public function init(){
 		}
 		
+		/*
+		 * Privilege must be set on each entry point to Dbbrowser
+		 * but not in constructor because when plugin caching mechanism
+		 * is used, a single class instance is used while user status may change
+		 */
+		function setPrivilege() {
+			// Access granted if connected to BO or user privilege high enough
+			if (isset($_SESSION['navig']->extclient)) $ec = ($_SESSION['navig']->extclient->privilege >= $info['id']->global_privilege);
+			else $ec = false;
+			if (isset($_SESSION['util'])) $u = ($_SESSION['util']->profil > 0);
+			else $u = false;
+			$this->privilege_ok = $ec || $u;
+		}
+		
 		public function boucle($texte, $args){
 		}
 		
 		public function action() {
+			$this->setPrivilege();			
 			switch ($_REQUEST['action']) {
 				case 'dbbrowser_showtables':
 				case 'dbbrowser_showtable':
@@ -355,6 +368,7 @@
 		
 		function showDb()
 		{
+			$this->setPrivilege();			
 			$this->dbTables();
 			switch ($_REQUEST['action']) {
 				case 'dbbrowser_showtables':
