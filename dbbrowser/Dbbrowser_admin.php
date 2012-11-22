@@ -6,6 +6,8 @@
  * 
  */ 
 
+	include_once(realpath(dirname(__FILE__)) . "/../../../fonctions/authplugins.php");
+	autorisation("Dbbrowser");
 	require_once(realpath(dirname(__FILE__)) . "./Dbbrowser.class.php");
 
 	$dbb = new Dbbrowser();
