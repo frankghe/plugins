@@ -10,7 +10,7 @@
 		$dir = realpath(dirname(__FILE__) . "/../../../classes/");
 		if ($handle = opendir($dir)) {
 			while (false !== ($entry = readdir($handle))) {
-				$locdir = $dir . "\\" . $entry;
+				$locdir = $dir . "/" . $entry;
 				if ($entry[0] != "." && ! is_dir($locdir) &&
 					/*
 					 * remove all classes not managing tables
@@ -19,7 +19,7 @@
 					strpos($entry, "Cache") === false &&
 					strpos($entry, "Cnx") === false	&&
 					strpos($entry, "Statut") === false) {
-					require_once(realpath($dir . "\\" . $entry));
+					require_once(realpath($dir . "/" . $entry));
 				}
 			}
 			closedir($handle);
@@ -586,14 +586,14 @@
 		// Retrieve list of tables from database
 		function dbTables()
 		{
-			// Thelia 1.5.1: $db = Cnx::$db;
-			$db = THELIA_BD_NOM;
+			// $db = Cnx::$db; /* Thelia 1.5.1 */
+			$db = THELIA_BD_NOM; /* Thelia >1.5.1 */
 			$sql = "SHOW TABLES FROM $db";
 			$result = mysql_query($sql);
 			
-					if (!$result) {
+			if (!$result) {
 				// Should never happen
-	   			ierror('internal error ('.$query.') at '. __FILE__ . " " . __LINE__);
+	   			ierror('internal error ('.$sql.') at '. __FILE__ . " " . __LINE__);
 	   			exit;
 			}
 			
@@ -607,14 +607,14 @@
 		{
 			$found = false;
 			
-			// Thelia 1.5.1: $db = Cnx::$db;
-			$db = THELIA_BD_NOM;
+			// $db = Cnx::$db; /* Thelia 1.5.1 */
+			$db = THELIA_BD_NOM; /* Thelia >1.5.1 */
 			$sql = "SHOW TABLES FROM $db LIKE '$table'";
 			$result = mysql_query($sql);
 				
 			if (!$result) {
 				// Should never happen
-	   			ierror('internal error ('.$query.') at '. __FILE__ . " " . __LINE__);
+	   			ierror('internal error ('.$sql.') at '. __FILE__ . " " . __LINE__);
 	   			exit;
 			}
 						
@@ -765,9 +765,15 @@
 							echo 'WARNINIG: trying to manage a reference to table <b>'.$refTable.'</b> but no class available<br/>
 									either add information (in database field comment) to avoid considering this field as a reference<br/>
 									or make sure the corresponding class is available<br/>';
+							$out.='<td>&nbsp;</td>';
 							continue ;
 						}
 						$cl = new $claz();
+						if (! method_exists($cl, "charger_id")) {
+							echo 'WARNINIG: could not find method charger_id for class $claz - skipping field<br/>';
+							$out.='<td>&nbsp;</td>';
+							continue ;
+						}
 						$cl->charger_id($rec->$field);
 						$name = $this->dbbrowser_getName($cl);
 						// If we could not figure out the name, simply show the value

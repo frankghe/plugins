@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding='UTF-8'?>
 <plugin>
 	<nom>Dbbrowser</nom>
- 	<version>1.0</version>
+ 	<version>1.1</version>
  	<prefixe>dbbrowser</prefixe>
 	<type>classique</type>
  	<auteur>Frank Ghenassia - frank@ghenassia.org</auteur>
