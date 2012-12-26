@@ -8,7 +8,7 @@
 
 	include_once(realpath(dirname(__FILE__)) . "/../../../fonctions/authplugins.php");
 	autorisation("Dbbrowser");
-	require_once(realpath(dirname(__FILE__)) . "./Dbbrowser.class.php");
+	require_once(realpath(dirname(__FILE__)) . "/Dbbrowser.class.php");
 
 	$dbb = new Dbbrowser();
 	// showDb() reads info directly from url parameters ($_REQUEST) 
