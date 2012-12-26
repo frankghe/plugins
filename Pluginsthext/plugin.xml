@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding='UTF-8'?>
 <plugin>
 	<nom>Thelia Extension</nom>
- 	<version>1.0</version>
+ 	<version>1.1</version>
  	<prefixe>thext</prefixe>
 	<type>classique</type>
  	<auteur>Frank Ghenassia - frank@ghenassia.org</auteur>
- 	<thelia>1.5.2</thelia>
- 	<description>Plugin qui facilite l'écriture de plugins...  &lt;a href="http://www.mainslibres.fr/blog/2012/11/11/plugin-thelia-pluginthext/"&gt;Plus d'informations&lt;/a&gt;</description>
+ 	<thelia>1.5.3.4</thelia>
+ 	<description>Plugin qui facilite l'écriture de plugins...  &lt;a href="http://frankghe.wordpress.com/2012/12/24/pluginthext-un-plugin-thelia/"&gt;Plus d'informations&lt;/a&gt;</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
 	<documentation>README.txt</documentation>

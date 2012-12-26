@@ -1,15 +1,15 @@
 ﻿<?xml version="1.0" encoding='UTF-8'?>
 <plugin>
 	<nom>Client étendu</nom>
- 	<version>1.0</version>
+ 	<version>1.1</version>
  	<prefixe>extclient</prefixe>
 	<type>classique</type>
  	<auteur>Frank Ghenassia - frank@ghenassia.org</auteur>
- 	<thelia>1.5.2</thelia>
- 	<description>Ajout d'informations associees aux clients. &lt;a href=""&gt;Plus d'informations&lt;/a&gt;</description>
+ 	<thelia>1.5.3.4</thelia>
+ 	<description>Ajout d'informations associees aux clients. &lt;a href="http://frankghe.wordpress.com/2012/12/24/extclient-un-plugin-thelia/"&gt;Plus d'informations&lt;/a&gt;</description>
 	<rubrique>Divers</rubrique>
 	<lien></lien>
-	<documentation>http://www.mainslibres.fr/blog/2012/11/19/extclient-un-plugin-thelia/</documentation>
+	<documentation>README.txt</documentation>
  	<etat>test</etat>
 	<install>http://contrib.thelia.fr/IMG/zip/extclient.zip</install>
 </plugin>
